@@ -9,7 +9,7 @@ source "$TRON_DIR/.venv/bin/activate"
 
 # ARM toolchain (Homebrew gcc-arm-embedded)
 export PATH="/opt/homebrew/bin:$PATH"
-export ARM_TOOLCHAIN="$(brew --prefix gcc-arm-embedded 2>/dev/null)/bin"
+export ARM_TOOLCHAIN="$(brew --prefix arm-none-eabi-gcc 2>/dev/null)/bin"
 [ -d "$ARM_TOOLCHAIN" ] && export PATH="$ARM_TOOLCHAIN:$PATH"
 
 # Convenience aliases
