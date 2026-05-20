@@ -1,0 +1,55 @@
+{
+    // C/C++ — use clangd from ST extension over the default IntelliSense engine
+    "C_Cpp.intelliSenseEngine": "disabled",
+    "clangd.path": "${userHome}/.vscode/extensions/stmicroelectronics.stm32cube-ide-clangd-1.0.5/clangd/bin/clangd",
+    "clangd.arguments": [
+        "--background-index",
+        "--clang-tidy",
+        "--header-insertion=never",
+        "--compile-commands-dir=${workspaceFolder}/build/Debug"
+    ],
+
+    // CMake
+    "cmake.sourceDirectory": "${workspaceFolder}/KWS_TRON",
+    "cmake.buildDirectory": "${workspaceFolder}/build/${buildType}",
+    "cmake.configureArgs": [
+        "-DCMAKE_TOOLCHAIN_FILE=${workspaceFolder}/KWS_TRON/cmake/arm-none-eabi-gcc.cmake"
+    ],
+    "cmake.generator": "Unix Makefiles",
+    "cmake.defaultVariants": {
+        "buildType": {
+            "default": "debug",
+            "choices": {
+                "debug": { "short": "Debug",   "buildType": "Debug" },
+                "release": { "short": "Release", "buildType": "Release" }
+            }
+        }
+    },
+
+    // Serial monitor (eclipse-cdt.serial-monitor)
+    "serialmonitor.baudRate": 115200,
+    "serialmonitor.lineEnding": "LF",
+
+    // Editor
+    "editor.formatOnSave": true,
+    "editor.tabSize": 4,
+    "editor.insertSpaces": true,
+    "[c]": {
+        "editor.defaultFormatter": "ms-vscode.cpptools"
+    },
+
+    // File associations
+    "files.associations": {
+        "*.h": "c",
+        "rtos_abstraction.h": "c",
+        "mfcc_config.h": "c",
+        "kws_model.h": "c"
+    },
+
+    // Exclude noise from explorer
+    "files.exclude": {
+        "**/.git": true,
+        "build/**/*.o": true,
+        "build/**/*.d": true
+    }
+}

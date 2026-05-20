@@ -1,0 +1,40 @@
+{
+    "configurations": [
+        {
+            "name": "STM32H533RE",
+            "compilerPath": "/opt/homebrew/bin/arm-none-eabi-gcc",
+            "compilerArgs": [
+                "-mcpu=cortex-m33",
+                "-mthumb",
+                "-mfpu=fpv5-sp-d16",
+                "-mfloat-abi=hard"
+            ],
+            "cStandard": "c11",
+            "cppStandard": "c++17",
+            "intelliSenseMode": "gcc-arm",
+            "includePath": [
+                "${workspaceFolder}/KWS_TRON/Core/Inc",
+                "${workspaceFolder}/KWS_TRON/app",
+                "${workspaceFolder}/KWS_TRON/audio",
+                "${workspaceFolder}/KWS_TRON/mtk3/tkernel/include",
+                "${workspaceFolder}/KWS_TRON/mtk3/tkernel/include/sys",
+                "${workspaceFolder}/KWS_TRON/cmsis_dsp/Include",
+                "${workspaceFolder}/KWS_TRON/tflm",
+                "${workspaceFolder}/KWS_TRON/tflm/tensorflow/lite/micro"
+            ],
+            "defines": [
+                "STM32H533xx",
+                "USE_HAL_DRIVER",
+                "TF_LITE_STATIC_MEMORY",
+                "TF_LITE_DISABLE_X86_NEON"
+            ],
+            "browse": {
+                "path": [
+                    "${workspaceFolder}/KWS_TRON"
+                ],
+                "limitSymbolsToIncludedHeaders": true
+            }
+        }
+    ],
+    "version": 4
+}

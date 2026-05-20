@@ -1,0 +1,26 @@
+# Build output
+build/
+
+# Python virtual environment
+.venv/
+
+# CMake generated
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+*.map
+
+# Compiled objects
+*.o
+*.d
+*.a
+*.elf
+*.hex
+*.bin
+
+# macOS
+.DS_Store
+
+# VS Code local overrides (keep .vscode config, ignore personal overrides)
+.vscode/*.log

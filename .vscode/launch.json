@@ -1,0 +1,50 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "stlinkgdbtarget",
+            "request": "launch",
+            "name": "Debug (ST-LINK — NUCLEO-H533RE)",
+            "cwd": "${workspaceFolder}",
+            "preBuild": "${command:st-stm32-ide-debug-launch.build}",
+            "runEntry": "main",
+            "imagesAndSymbols": [
+                {
+                    "imageFileName": "${workspaceFolder}/build/Debug/KWS_TRON.elf"
+                }
+            ],
+            "targetId": "STM32H533RETx",
+            "interface": "swd",
+            "swoConfig": {
+                "enabled": true,
+                "cpuFrequency": 250000000,
+                "swoFrequency": 2000000,
+                "source": "probe",
+                "decoders": [
+                    {
+                        "type": "console",
+                        "label": "ITM port 0 (DWT cycles)",
+                        "port": 0
+                    }
+                ]
+            },
+            "rtos": "auto"
+        },
+        {
+            "type": "stlinkgdbtarget",
+            "request": "launch",
+            "name": "Flash + Reset (no debug)",
+            "cwd": "${workspaceFolder}",
+            "preBuild": "${command:st-stm32-ide-debug-launch.build}",
+            "runEntry": "main",
+            "noDebug": true,
+            "imagesAndSymbols": [
+                {
+                    "imageFileName": "${workspaceFolder}/build/Debug/KWS_TRON.elf"
+                }
+            ],
+            "targetId": "STM32H533RETx",
+            "interface": "swd"
+        }
+    ]
+}
