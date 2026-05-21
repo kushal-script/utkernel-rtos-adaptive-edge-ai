@@ -52,12 +52,20 @@
         {
             "label": "Flash (ST-Link CLI)",
             "type": "shell",
-            "command": "STM32_Programmer_CLI",
+            "command": "${env:HOME}/Library/Application Support/stm32cube/bundles/programmer/2.22.0+st.1/bin/STM32_Programmer_CLI",
             "args": [
                 "-c", "port=SWD",
                 "-d", "${workspaceFolder}/build/Debug/KWS_TRON.elf",
                 "-rst"
             ],
+            "group": "test",
+            "presentation": { "reveal": "always", "panel": "shared" }
+        },
+        {
+            "label": "Probe Board (verify ST-LINK sees H533RE)",
+            "type": "shell",
+            "command": "${env:HOME}/Library/Application Support/stm32cube/bundles/programmer/2.22.0+st.1/bin/STM32_Programmer_CLI",
+            "args": ["-c", "port=SWD"],
             "group": "test",
             "presentation": { "reveal": "always", "panel": "shared" }
         },
