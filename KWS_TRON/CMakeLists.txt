@@ -5,7 +5,6 @@ set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 17)
 
 # ── Linker script ────────────────────────────────────────────────────────────
-# Place STM32H533RETX_FLASH.ld in KWS_TRON/ (generate via CubeMX or copy from BSP)
 set(LINKER_SCRIPT ${CMAKE_SOURCE_DIR}/STM32H533RETX_FLASH.ld)
 
 # ── Source files ─────────────────────────────────────────────────────────────
@@ -19,12 +18,25 @@ file(GLOB_RECURSE CORE_SOURCES
     "Core/Startup/*.s"
 )
 
-# TFLite Micro — added after generating the standalone source tree
-# file(GLOB_RECURSE TFLM_SOURCES "tflm/*.c" "tflm/*.cc")
+file(GLOB_RECURSE HAL_SOURCES
+    "Drivers/STM32H5xx_HAL_Driver/Src/*.c"
+)
+
+file(GLOB_RECURSE MTK3_SOURCES
+    "mtk3/mtkernel/kernel/*.c"
+    "mtk3/mtkernel/kernel/*.s"
+    "mtk3/sysdepend/stm32_cube/*.c"
+    "mtk3/sysdepend/stm32_cube/*.s"
+)
+
+# TFLite Micro — uncomment after running project_generation script (Phase 3)
+# file(GLOB_RECURSE TFLM_SOURCES "tflm/*.c" "tflm/*.cc" "tflm/*.cpp")
 
 add_executable(${PROJECT_NAME}
     ${APP_SOURCES}
     ${CORE_SOURCES}
+    ${HAL_SOURCES}
+    ${MTK3_SOURCES}
     # ${TFLM_SOURCES}
 )
 
@@ -33,9 +45,17 @@ target_include_directories(${PROJECT_NAME} PRIVATE
     Core/Inc
     app
     audio
-    mtk3/tkernel/include
-    mtk3/tkernel/include/sys
-    cmsis_dsp/Include
+    # HAL + CMSIS device headers (from Drivers/ copied out of BSP zip)
+    Drivers/STM32H5xx_HAL_Driver/Inc
+    Drivers/STM32H5xx_HAL_Driver/Inc/Legacy
+    Drivers/CMSIS/Device/ST/STM32H5xx/Include
+    Drivers/CMSIS/Include
+    # µT-Kernel 3.0 BSP2 headers
+    mtk3/include
+    mtk3/include/sys/sysdepend/stm32_cube/nucleo_stm32h533
+    # CMSIS-DSP (populated when STM32H5 firmware package is installed)
+    # cmsis_dsp/Include
+    # TFLite Micro (uncomment for Phase 3)
     # tflm
     # tflm/tensorflow/lite/micro
 )
@@ -49,7 +69,8 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
 )
 
 # ── CMSIS-DSP static library ──────────────────────────────────────────────────
-# Uncomment and set path after installing STM32H5 firmware package via CubeMX
+# Populate after running: Help → STM32Cube Updater → STM32H5 in VS Code
+# then set path to the .a file from the firmware package.
 # target_link_libraries(${PROJECT_NAME}
 #     ${CMAKE_SOURCE_DIR}/cmsis_dsp/Lib/GCC/libarm_cortexM33_math.a
 # )
