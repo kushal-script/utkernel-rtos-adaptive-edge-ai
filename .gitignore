@@ -22,5 +22,9 @@ Makefile
 # macOS
 .DS_Store
 
+# BSP zip download and extraction (content already copied into KWS_TRON/)
+mtk3bsp2_stm32h533.zip
+mtk3bsp2_h533_extracted/
+
 # VS Code local overrides (keep .vscode config, ignore personal overrides)
 .vscode/*.log
