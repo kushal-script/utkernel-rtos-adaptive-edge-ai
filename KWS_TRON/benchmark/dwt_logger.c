@@ -1,4 +1,4 @@
-#include <stdint.h>
+#include "main.h"        /* pulls in stm32h5xx.h → IRQn_Type, __FPU_PRESENT */
 #include "core_cm33.h"  /* CMSIS — DWT, CoreDebug, ITM */
 
 void dwt_init(void) {
