@@ -2,19 +2,26 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "type": "stlinkgdbtarget",
+            "name": "Debug (OpenOCD — NUCLEO-H533RE)",
+            "type": "cortex-debug",
             "request": "launch",
-            "name": "Debug (ST-LINK — NUCLEO-H533RE)",
-            "cwd": "${workspaceFolder}",
-            "preBuild": "${command:st-stm32-ide-debug-launch.build}",
-            "runEntry": "main",
-            "imagesAndSymbols": [
-                {
-                    "imageFileName": "${workspaceFolder}/build/Debug/KWS_TRON.elf"
-                }
+            "servertype": "openocd",
+            "serverpath": "/opt/homebrew/bin/openocd",
+            "configFiles": [
+                "interface/stlink.cfg",
+                "${workspaceFolder}/.vscode/stm32h533.cfg"
             ],
-            "targetId": "STM32H533RETx",
-            "interface": "swd",
+            "openOCDLaunchCommands": [
+                "transport select swd",
+                "adapter speed 500"
+            ],
+            "executable": "${workspaceFolder}/build/Debug/KWS_TRON.elf",
+            "cwd": "${workspaceFolder}",
+            "device": "STM32H533RETx",
+            "svdFile": "",
+            "runToEntryPoint": "main",
+            "showDevDebugOutput": "none",
+            "rtos": "auto",
             "swoConfig": {
                 "enabled": true,
                 "cpuFrequency": 250000000,
@@ -28,23 +35,27 @@
                     }
                 ]
             },
-            "rtos": "auto"
+            "preLaunchTask": "Build (Debug)"
         },
         {
-            "type": "stlinkgdbtarget",
+            "name": "Flash + Reset (OpenOCD, no debug)",
+            "type": "cortex-debug",
             "request": "launch",
-            "name": "Flash + Reset (no debug)",
-            "cwd": "${workspaceFolder}",
-            "preBuild": "${command:st-stm32-ide-debug-launch.build}",
-            "runEntry": "main",
-            "noDebug": true,
-            "imagesAndSymbols": [
-                {
-                    "imageFileName": "${workspaceFolder}/build/Debug/KWS_TRON.elf"
-                }
+            "servertype": "openocd",
+            "serverpath": "/opt/homebrew/bin/openocd",
+            "configFiles": [
+                "interface/stlink.cfg",
+                "${workspaceFolder}/.vscode/stm32h533.cfg"
             ],
-            "targetId": "STM32H533RETx",
-            "interface": "swd"
+            "openOCDLaunchCommands": [
+                "transport select swd",
+                "adapter speed 500"
+            ],
+            "executable": "${workspaceFolder}/build/Debug/KWS_TRON.elf",
+            "cwd": "${workspaceFolder}",
+            "device": "STM32H533RETx",
+            "noDebug": true,
+            "preLaunchTask": "Build (Debug)"
         }
     ]
 }
