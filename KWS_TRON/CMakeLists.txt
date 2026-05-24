@@ -23,7 +23,8 @@ file(GLOB_RECURSE HAL_SOURCES
     "Drivers/STM32H5xx_HAL_Driver/Src/*.c"
 )
 
-file(GLOB_RECURSE MTK3_SOURCES
+# µT-Kernel kernel + lib: GLOB_RECURSE is fine — no platform variants here
+file(GLOB_RECURSE MTK3_KERNEL_SOURCES
     "mtk3/mtk3_bsp2/mtkernel/kernel/*.c"
     "mtk3/mtk3_bsp2/mtkernel/kernel/*.s"
     "mtk3/mtk3_bsp2/mtkernel/kernel/*.S"
@@ -31,9 +32,42 @@ file(GLOB_RECURSE MTK3_SOURCES
     "mtk3/mtk3_bsp2/mtkernel/lib/*.s"
     "mtk3/mtk3_bsp2/mtkernel/lib/*.S"
     "mtk3/mtk3_bsp2/mtkernel/device/*.c"
-    "mtk3/mtk3_bsp2/sysdepend/stm32_cube/*.c"
-    "mtk3/mtk3_bsp2/sysdepend/stm32_cube/*.s"
-    "mtk3/mtk3_bsp2/sysdepend/stm32_cube/*.S"
+)
+
+# µT-Kernel BSP sysdepend: EXPLICIT list for STM32H533 (Cortex-M33 = ARMv8-M)
+# Must NOT use GLOB_RECURSE here — the tree contains all STM32 family variants
+# (stm32f4/f7/g4/h7/l4/h5/n6) and all board tm_com files. Including all of them
+# causes multiply-defined symbols at link time.
+set(MTK3_BSP_DIR mtk3/mtk3_bsp2/sysdepend/stm32_cube)
+set(MTK3_SOURCES
+    ${MTK3_KERNEL_SOURCES}
+
+    # Top-level BSP glue
+    ${MTK3_BSP_DIR}/power_save.c
+    ${MTK3_BSP_DIR}/hw_setting.c
+    ${MTK3_BSP_DIR}/devinit.c
+
+    # CPU core — ARMv8-M only (STM32H533 is Cortex-M33)
+    ${MTK3_BSP_DIR}/cpu/core/armv8m/cpu_cntl.c
+    ${MTK3_BSP_DIR}/cpu/core/armv8m/interrupt.c
+    ${MTK3_BSP_DIR}/cpu/core/armv8m/sys_start.c
+    ${MTK3_BSP_DIR}/cpu/core/armv8m/exc_hdr.c
+    ${MTK3_BSP_DIR}/cpu/core/armv8m/dispatch.S
+
+    # libtk — ARMv8-M + STM32H5 timer/interrupt only
+    ${MTK3_BSP_DIR}/lib/libtk/ptimer_stm32.c
+    ${MTK3_BSP_DIR}/lib/libtk/cpu/core/armv8m/int_armv8m.c
+    ${MTK3_BSP_DIR}/lib/libtk/cpu/core/armv8m/wusec_armv8m.c
+    ${MTK3_BSP_DIR}/lib/libtk/cpu/stm32h5/ptimer_stm32h5.c
+    ${MTK3_BSP_DIR}/lib/libtk/cpu/stm32h5/int_stm32h5.c
+
+    # libtm — NUCLEO-H533 serial monitor only
+    ${MTK3_BSP_DIR}/lib/libtm/nucleo_stm32h533/tm_com.c
+
+    # Device drivers
+    ${MTK3_BSP_DIR}/device/hal_i2c/hal_i2c.c
+    ${MTK3_BSP_DIR}/device/hal_adc/hal_adc.c
+    ${MTK3_BSP_DIR}/device/hal_adc/sysdepend/hal_adc_stm32h5.c
 )
 
 # TFLite Micro — uncomment after running project_generation script (Phase 3)
@@ -70,6 +104,11 @@ target_include_directories(${PROJECT_NAME} PRIVATE
     mtk3/mtk3_bsp2/mtkernel/kernel/knlinc
     mtk3/mtk3_bsp2/mtkernel/device/include
     mtk3/mtk3_bsp2/mtkernel/device/common/drvif
+    # BSP sysdepend headers — ARMv8-M core headers (cpu_status.h, cpu_task.h, sys_timer.h)
+    mtk3/mtk3_bsp2/sysdepend/stm32_cube
+    mtk3/mtk3_bsp2/sysdepend/stm32_cube/cpu/core/armv8m
+    mtk3/mtk3_bsp2/sysdepend/stm32_cube/lib/libtk/cpu/stm32h5
+    mtk3/mtk3_bsp2/sysdepend/stm32_cube/lib/libtm/nucleo_stm32h533
     # CMSIS-DSP (populated when STM32H5 firmware package is installed)
     # cmsis_dsp/Include
     # TFLite Micro (uncomment for Phase 3)

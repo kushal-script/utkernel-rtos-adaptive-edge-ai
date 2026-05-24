@@ -21,7 +21,8 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include <stdio.h>
+#include "dwt_logger.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -64,7 +65,7 @@ static void MX_I2C1_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-
+#include <string.h>   /* strlen */
 /* USER CODE END 0 */
 
 /**
@@ -104,6 +105,17 @@ int main(void)
   MX_ADC1_Init();
   MX_I2C1_Init();
   /* USER CODE BEGIN 2 */
+
+  /* ── DWT cycle counter init + smoke test ─────────────────────────────── */
+  dwt_init();
+  uint32_t t0     = dwt_read();
+  HAL_Delay(1);                          /* ~1 ms */
+  uint32_t elapsed = dwt_read() - t0;
+  char msg[48];
+  snprintf(msg, sizeof(msg), "DWT 1ms = %lu cycles\r\n", (unsigned long)elapsed);
+  HAL_UART_Transmit(&huart2, (uint8_t *)msg, (uint16_t)strlen(msg), 100);
+
+  /* ── Start µT-Kernel 3.0 ─────────────────────────────────────────────── */
   void knl_start_mtkernel(void);
   knl_start_mtkernel();
   /* USER CODE END 2 */
