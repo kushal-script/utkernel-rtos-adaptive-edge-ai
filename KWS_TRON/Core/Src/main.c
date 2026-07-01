@@ -48,7 +48,8 @@ I2C_HandleTypeDef hi2c1;
 UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
-
+I2S_HandleTypeDef hi2s2;
+DMA_HandleTypeDef hdma_spi2_rx;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -60,7 +61,8 @@ static void MX_USART2_UART_Init(void);
 static void MX_ADC1_Init(void);
 static void MX_I2C1_Init(void);
 /* USER CODE BEGIN PFP */
-
+static void MX_GPDMA1_Init(void);
+static void MX_I2S2_Init(void);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -81,8 +83,7 @@ int main(void)
 
   /* MCU Configuration--------------------------------------------------------*/
 
-  /* MPU Configuration--------------------------------------------------------*/
-  MPU_Config();
+  /* MPU_Config() disabled, TrustZone is the intended isolation. See docs/hardware.md. */
 
   /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
   HAL_Init();
@@ -106,16 +107,19 @@ int main(void)
   MX_I2C1_Init();
   /* USER CODE BEGIN 2 */
 
-  /* ── DWT cycle counter init + smoke test ─────────────────────────────── */
+  /* GPDMA1 before I2S2, HAL_I2S_MspInit links the channel. */
+  MX_GPDMA1_Init();
+  MX_I2S2_Init();
+
+  /* DWT cycle counter, with a one shot sanity print of cycles per ms. */
   dwt_init();
-  uint32_t t0     = dwt_read();
-  HAL_Delay(1);                          /* ~1 ms */
+  uint32_t t0      = dwt_read();
+  HAL_Delay(1);
   uint32_t elapsed = dwt_read() - t0;
   char msg[48];
   snprintf(msg, sizeof(msg), "DWT 1ms = %lu cycles\r\n", (unsigned long)elapsed);
   HAL_UART_Transmit(&huart2, (uint8_t *)msg, (uint16_t)strlen(msg), 100);
 
-  /* ── Start µT-Kernel 3.0 ─────────────────────────────────────────────── */
   void knl_start_mtkernel(void);
   knl_start_mtkernel();
   /* USER CODE END 2 */
@@ -140,44 +144,46 @@ void SystemClock_Config(void)
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
   RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
 
-  /** Configure the main internal regulator output voltage
-  */
-  __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE3);
+  /* Voltage scaling 0, required above 200 MHz on STM32H5. */
+  __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE0);
+  while (!__HAL_PWR_GET_FLAG(PWR_FLAG_VOSRDY)) {}
 
-  while(!__HAL_PWR_GET_FLAG(PWR_FLAG_VOSRDY)) {}
-
-  /** Initializes the RCC Oscillators according to the specified parameters
-  * in the RCC_OscInitTypeDef structure.
-  */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
-  RCC_OscInitStruct.HSIState = RCC_HSI_ON;
-  RCC_OscInitStruct.HSIDiv = RCC_HSI_DIV2;
+  /* HSI to 250 MHz SYSCLK. Clock tree math is in docs/hardware.md. */
+  RCC_OscInitStruct.OscillatorType      = RCC_OSCILLATORTYPE_HSI;
+  RCC_OscInitStruct.HSIState            = RCC_HSI_ON;
+  RCC_OscInitStruct.HSIDiv              = RCC_HSI_DIV1;
   RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
-  RCC_OscInitStruct.PLL.PLLState = RCC_PLL_NONE;
+  RCC_OscInitStruct.PLL.PLLState        = RCC_PLL_ON;
+  RCC_OscInitStruct.PLL.PLLSource       = RCC_PLL1_SOURCE_HSI;
+  RCC_OscInitStruct.PLL.PLLM            = 16;
+  RCC_OscInitStruct.PLL.PLLN            = 125;
+  RCC_OscInitStruct.PLL.PLLP            = 2;
+  RCC_OscInitStruct.PLL.PLLQ            = 2;
+  RCC_OscInitStruct.PLL.PLLR            = 2;
+  RCC_OscInitStruct.PLL.PLLRGE          = RCC_PLL1_VCIRANGE_1;
+  RCC_OscInitStruct.PLL.PLLVCOSEL       = RCC_PLL1_VCORANGE_WIDE;
+  RCC_OscInitStruct.PLL.PLLFRACN        = 0;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
   {
     Error_Handler();
   }
 
-  /** Initializes the CPU, AHB and APB buses clocks
-  */
-  RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
-                              |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2
-                              |RCC_CLOCKTYPE_PCLK3;
-  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_HSI;
-  RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
+  /* SYSCLK from PLL1P, AHB and APB undivided. Five flash wait states at VOS0. */
+  RCC_ClkInitStruct.ClockType      = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK |
+                                     RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2 |
+                                     RCC_CLOCKTYPE_PCLK3;
+  RCC_ClkInitStruct.SYSCLKSource   = RCC_SYSCLKSOURCE_PLLCLK;
+  RCC_ClkInitStruct.AHBCLKDivider  = RCC_SYSCLK_DIV1;
   RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV1;
   RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
   RCC_ClkInitStruct.APB3CLKDivider = RCC_HCLK_DIV1;
-
-  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_1) != HAL_OK)
+  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_5) != HAL_OK)
   {
     Error_Handler();
   }
 
-  /** Configure the programming delay
-  */
-  __HAL_FLASH_SET_PROGRAM_DELAY(FLASH_PROGRAMMING_DELAY_0);
+  /* Flash programming delay for high HCLK. */
+  __HAL_FLASH_SET_PROGRAM_DELAY(FLASH_PROGRAMMING_DELAY_2);
 }
 
 /**
@@ -399,7 +405,33 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+/* GPDMA1 clock and IRQ. Channel config for SPI2 RX is in HAL_I2S_MspInit. */
+static void MX_GPDMA1_Init(void)
+{
+  __HAL_RCC_GPDMA1_CLK_ENABLE();
+  HAL_NVIC_SetPriority(GPDMA1_Channel0_IRQn, 5, 0);
+  HAL_NVIC_EnableIRQ(GPDMA1_Channel0_IRQn);
+}
 
+/* I2S2 master RX from the INMP441 at 16 kHz. Wiring and rationale in docs/hardware.md. */
+static void MX_I2S2_Init(void)
+{
+  hi2s2.Instance              = SPI2;
+  hi2s2.Init.Mode             = I2S_MODE_MASTER_RX;
+  hi2s2.Init.Standard         = I2S_STANDARD_PHILIPS;
+  hi2s2.Init.DataFormat       = I2S_DATAFORMAT_24B;
+  hi2s2.Init.MCLKOutput       = I2S_MCLKOUTPUT_DISABLE;
+  hi2s2.Init.AudioFreq        = I2S_AUDIOFREQ_16K;
+  hi2s2.Init.CPOL             = I2S_CPOL_LOW;
+  hi2s2.Init.FirstBit         = I2S_FIRSTBIT_MSB;
+  hi2s2.Init.WSInversion      = I2S_WS_INVERSION_DISABLE;
+  hi2s2.Init.Data24BitAlignment = I2S_DATA_24BIT_ALIGNMENT_RIGHT;
+  hi2s2.Init.MasterKeepIOState  = I2S_MASTER_KEEP_IO_STATE_DISABLE;
+  if (HAL_I2S_Init(&hi2s2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+}
 /* USER CODE END 4 */
 
  /* MPU Configuration */

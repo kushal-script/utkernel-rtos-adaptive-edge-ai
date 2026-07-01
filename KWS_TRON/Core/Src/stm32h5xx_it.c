@@ -58,7 +58,7 @@
 extern ADC_HandleTypeDef hadc1;
 extern I2C_HandleTypeDef hi2c1;
 /* USER CODE BEGIN EV */
-
+extern DMA_HandleTypeDef hdma_spi2_rx;
 /* USER CODE END EV */
 
 /******************************************************************************/
@@ -242,5 +242,13 @@ void I2C1_ER_IRQHandler(void)
 }
 
 /* USER CODE BEGIN 1 */
-
+/**
+  * @brief GPDMA1 Channel 0 — used by SPI2_RX for the INMP441 audio stream.
+  * HAL_DMA_IRQHandler dispatches into HAL_I2S_RxHalfCpltCallback /
+  * HAL_I2S_RxCpltCallback (implemented in app/t1_dma_ingest.c).
+  */
+void GPDMA1_Channel0_IRQHandler(void)
+{
+  HAL_DMA_IRQHandler(&hdma_spi2_rx);
+}
 /* USER CODE END 1 */

@@ -20,7 +20,7 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 /* USER CODE BEGIN Includes */
-
+extern DMA_HandleTypeDef hdma_spi2_rx;
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -329,5 +329,85 @@ void HAL_UART_MspDeInit(UART_HandleTypeDef* huart)
 }
 
 /* USER CODE BEGIN 1 */
+/**
+  * @brief I2S MSP Initialization — pins, peripheral clock, DMA channel.
+  * INMP441 wiring on NUCLEO-H533RE:
+  *   PB12 → I2S2_WS    (mic WS pin)
+  *   PB13 → I2S2_CK    (mic SCK pin)
+  *   PB15 → I2S2_SD    (mic SD pin)
+  *   3V3 / GND for power; mic L/R pin tied LOW → data in LEFT slot.
+  */
+void HAL_I2S_MspInit(I2S_HandleTypeDef *hi2s)
+{
+  GPIO_InitTypeDef GPIO_InitStruct = {0};
+  RCC_PeriphCLKInitTypeDef PeriphClkInitStruct = {0};
 
+  if (hi2s->Instance == SPI2)
+  {
+    /* SPI2/I2S2 clock source: PLL1Q (250 MHz). H5's SPI2 has no PCLK/HSI
+     * option — must come from a PLL output. The HAL prescaler computes a
+     * ~122 divider for 16 kHz × 64-bit frames → ~0.07% rate error, well
+     * inside what the INMP441 tolerates. Phase 2 may move to a dedicated
+     * audio PLL (PLL2P) for an exact ratio if low-jitter matters. */
+    PeriphClkInitStruct.PeriphClockSelection = RCC_PERIPHCLK_SPI2;
+    PeriphClkInitStruct.Spi2ClockSelection   = RCC_SPI2CLKSOURCE_PLL1Q;
+    if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInitStruct) != HAL_OK)
+    {
+      Error_Handler();
+    }
+
+    __HAL_RCC_SPI2_CLK_ENABLE();
+    __HAL_RCC_GPIOB_CLK_ENABLE();
+
+    /* PB12 (WS), PB13 (CK), PB15 (SD) — all AF5 (SPI2/I2S2). */
+    GPIO_InitStruct.Pin       = GPIO_PIN_12 | GPIO_PIN_13 | GPIO_PIN_15;
+    GPIO_InitStruct.Mode      = GPIO_MODE_AF_PP;
+    GPIO_InitStruct.Pull      = GPIO_NOPULL;
+    GPIO_InitStruct.Speed     = GPIO_SPEED_FREQ_VERY_HIGH;
+    GPIO_InitStruct.Alternate = GPIO_AF5_SPI2;
+    HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+    /* GPDMA1 channel 0 for SPI2_RX. Word transfers (32-bit) match the
+     * 24-bit-in-32-bit-slot frame layout of the INMP441. Mode = NORMAL;
+     * the RxCpltCallback re-arms the DMA each block so capture stays
+     * continuous (Phase 2 will move to linked-list circular for zero gap). */
+    hdma_spi2_rx.Instance                  = GPDMA1_Channel0;
+    hdma_spi2_rx.Init.Request              = GPDMA1_REQUEST_SPI2_RX;
+    hdma_spi2_rx.Init.BlkHWRequest         = DMA_BREQ_SINGLE_BURST;
+    hdma_spi2_rx.Init.Direction            = DMA_PERIPH_TO_MEMORY;
+    hdma_spi2_rx.Init.SrcInc               = DMA_SINC_FIXED;
+    hdma_spi2_rx.Init.DestInc              = DMA_DINC_INCREMENTED;
+    hdma_spi2_rx.Init.SrcDataWidth         = DMA_SRC_DATAWIDTH_HALFWORD;
+    hdma_spi2_rx.Init.DestDataWidth        = DMA_DEST_DATAWIDTH_HALFWORD;
+    hdma_spi2_rx.Init.Priority             = DMA_LOW_PRIORITY_HIGH_WEIGHT;
+    hdma_spi2_rx.Init.SrcBurstLength       = 1;
+    hdma_spi2_rx.Init.DestBurstLength      = 1;
+    hdma_spi2_rx.Init.TransferAllocatedPort= DMA_SRC_ALLOCATED_PORT0 |
+                                             DMA_DEST_ALLOCATED_PORT0;
+    hdma_spi2_rx.Init.TransferEventMode    = DMA_TCEM_BLOCK_TRANSFER;
+    hdma_spi2_rx.Init.Mode                 = DMA_NORMAL;
+    if (HAL_DMA_Init(&hdma_spi2_rx) != HAL_OK)
+    {
+      Error_Handler();
+    }
+
+    __HAL_LINKDMA(hi2s, hdmarx, hdma_spi2_rx);
+
+    if (HAL_DMA_ConfigChannelAttributes(&hdma_spi2_rx,
+                                        DMA_CHANNEL_NPRIV) != HAL_OK)
+    {
+      Error_Handler();
+    }
+  }
+}
+
+void HAL_I2S_MspDeInit(I2S_HandleTypeDef *hi2s)
+{
+  if (hi2s->Instance == SPI2)
+  {
+    __HAL_RCC_SPI2_CLK_DISABLE();
+    HAL_GPIO_DeInit(GPIOB, GPIO_PIN_12 | GPIO_PIN_13 | GPIO_PIN_15);
+    HAL_DMA_DeInit(&hdma_spi2_rx);
+  }
+}
 /* USER CODE END 1 */

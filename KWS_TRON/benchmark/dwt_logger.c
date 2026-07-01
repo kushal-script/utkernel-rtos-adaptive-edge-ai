@@ -1,5 +1,5 @@
-#include "main.h"        /* pulls in stm32h5xx.h → IRQn_Type, __FPU_PRESENT */
-#include "core_cm33.h"  /* CMSIS — DWT, CoreDebug, ITM */
+#include "main.h"
+#include "core_cm33.h"  /* CMSIS DWT, CoreDebug, ITM */
 
 void dwt_init(void) {
     CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
@@ -11,7 +11,7 @@ uint32_t dwt_read(void) {
     return DWT->CYCCNT;
 }
 
-/* Send layer cycle count over SWO ITM port 0. */
+/* Per layer cycle count over SWO ITM port 0. */
 void dwt_log_layer(uint8_t layer_id, uint32_t cycles) {
     ITM_SendChar('L');
     ITM_SendChar(layer_id);
