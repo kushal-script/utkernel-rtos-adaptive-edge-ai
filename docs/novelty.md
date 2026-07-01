@@ -27,11 +27,9 @@ A model trained on MFCC features cannot be handed a zero padded vector and be re
 
 ### Runtime precision is variant selection, not per layer switching inside TFLite Micro
 
-TFLite Micro builds a static graph. A layer's datatype cannot be flipped mid inference inside its interpreter. Two achievable versions exist.
+TFLite Micro builds a static graph. A layer's datatype cannot be flipped mid inference inside its interpreter, so this project does not use the TFLM interpreter for the inference core.
 
-Safe path, model variant selection. Keep two or three prebuilt models, a full INT8 model and a higher precision or larger model. T5 picks which one runs on the next inference from the measured slack against the DWT deadline. Simple, robust, and directly measurable.
-
-Ambitious path, a hand written DS-CNN core of a few hundred lines using CMSIS-NN INT8 kernels with an FP32 fallback, where per layer precision is genuinely selectable at runtime. This delivers the true per layer switch the proposal describes and gives a cleaner per layer DWT story than fighting the interpreter. Start on the safe path and evolve to this if time allows.
+Decided path, a hand written DS-CNN core of a few hundred lines using CMSIS-NN INT8 kernels with an FP32 fallback, where per layer precision is genuinely selectable at runtime. T5 reads the per layer DWT cycle count, and when a layer overruns its budget it drops the next layer to INT8 before the deadline is missed. This delivers the true per layer switch the proposal describes and gives a cleaner per layer timing story than the interpreter would. Whole model variant selection, swapping two prebuilt models by DWT slack, is kept only as an optional bootstrap for the first baseline in M3.
 
 Correct the mechanism description too. The INT8 speedup on Cortex-M33 comes from CMSIS-NN packed SIMD multiply accumulate, SMLAD, and from avoiding the FPU, not from an ALU that does an INT8 MAC in one cycle versus four for FP32 on the same unit. The honest claim is that INT8 kernels are roughly two to four times faster and lower energy than FP32 kernels, measured with the DWT.
 
@@ -43,9 +41,9 @@ A typical KWS DS-CNN is tens of kilobytes of weights, which the 272 KB SRAM hold
 
 Secure world weight isolation is real on the M33 but costs a secure and non secure project split, SAU and NSC veneers, and a dual binary build. It is a model IP protection story, largely orthogonal to the RTOS and ML co-optimisation thesis the contest rewards. Keep it as the last milestone and be ready to cut it without weakening the core.
 
-## Novelty upgrade worth considering
+## Headline contribution, self tuning controller
 
-Make T5 a self tuning controller rather than a fixed threshold if else. Add online hysteresis and a lightweight policy, for example an adaptive threshold rule or a small contextual bandit, that adjusts its variance and budget thresholds to the observed acoustic environment at runtime. The framing, the RTOS learns its own adaptation policy on device, is a genuinely fresh research angle, is only a few hundred lines, and separates this work from any fixed adaptive scheme. This is the strongest single addition beyond the current proposal.
+T5 is a self tuning controller, not a fixed threshold if else. It adds online hysteresis and a lightweight policy, for example an adaptive threshold rule or a small contextual bandit, that adjusts its variance and budget thresholds to the observed acoustic environment at runtime. The framing, the RTOS learns its own adaptation policy on device, is the fresh research angle that separates this work from any fixed adaptive scheme, and it is only a few hundred lines on top of the fixed threshold loop. The self tuning policy must be shown to converge and to beat the best hand tuned fixed thresholds, otherwise it is decoration.
 
 ## Immediate next engineering step
 

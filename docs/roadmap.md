@@ -20,7 +20,7 @@ Exit: on device MFCC matches the host reference for a known test tone.
 
 ## M3, baseline inference
 
-T4 runs one static INT8 model on a fixed window. Measure per inference latency with the DWT and classification accuracy on a held out set. This is the static baseline that every adaptive result is compared against.
+T4 runs the hand written DS-CNN core at fixed INT8 precision on a fixed window, using CMSIS-NN kernels. Measure per inference and per layer latency with the DWT and classification accuracy on a held out set. This is the static baseline that every adaptive result is compared against, and the same core that M5 makes precision switchable.
 
 Exit: a stated baseline number for latency and accuracy, logged in `experiments/`.
 
@@ -32,9 +32,9 @@ Exit: measured reduction in average work on quiet input with no loss of keyword 
 
 ## M5, closed loop, centerpiece
 
-T5 reads the DWT budget and signal state every cycle and drives the three adaptation decisions together: window size, feature gating, and numeric precision, plus priority changes under load. This is the contribution that the contest rewards, the RTOS as the controller.
+T5 reads the per layer DWT budget and signal state every cycle and drives adaptation together: window size, feature gating, and per layer numeric precision in the hand written core, plus priority changes under load. The controller is self tuning, it adjusts its variance and budget thresholds to the observed environment at runtime rather than using fixed constants. This is the contribution the contest rewards and the research angle for a later paper, the RTOS as a controller that learns its own policy.
 
-Exit: the adaptive pipeline holds a hard per inference deadline while cutting average power at a stated accuracy cost, versus the M3 baseline.
+Exit: the adaptive pipeline holds a hard per inference deadline while cutting average power at a stated accuracy cost versus the M3 baseline, and the self tuning thresholds are shown to converge and to beat the best fixed thresholds.
 
 ## M6, benchmark harness
 
@@ -44,7 +44,7 @@ Exit: one reproducible figure that shows the tradeoff the project claims.
 
 ## M7, stretch
 
-TrustZone weight isolation, larger model memory pool streaming, and a self tuning controller policy. These strengthen the story but are separable from the core thesis and can be cut without weakening it. See [novelty.md](novelty.md).
+TrustZone secure world weight isolation and larger model memory pool streaming. These strengthen the story but are separable from the core thesis and can be cut without weakening it. See [novelty.md](novelty.md).
 
 ## Recommended structural change
 

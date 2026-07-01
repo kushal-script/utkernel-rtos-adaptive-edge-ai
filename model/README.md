@@ -5,7 +5,7 @@ Training and export pipeline for the keyword spotting model, and the versioned a
 ## Flow
 
 1. Train, Edge Impulse or a local pipeline, on the target keyword set.
-2. Export quantised variants. At minimum a full INT8 model. A higher precision or larger variant is needed for the runtime precision selection described in [../docs/novelty.md](../docs/novelty.md).
+2. Export per layer weights in both INT8, with quantisation parameters, and FP32. The hand written inference core selects precision per layer at runtime and needs both available. See [../docs/novelty.md](../docs/novelty.md).
 3. Convert to a C header the firmware includes as `KWS_TRON/audio/kws_model.h`.
 4. Record the training run under `../experiments/` with its accuracy, size, and the data it was trained on.
 
