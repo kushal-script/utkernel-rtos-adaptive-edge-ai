@@ -40,7 +40,5 @@ void HAL_I2S_RxCpltCallback(I2S_HandleTypeDef *hi2s)
 {
     if (hi2s->Instance == SPI2) {
         tk_set_flg(flgid_audio, FLG_FULL_READY);
-        HAL_I2S_Receive_DMA(hi2s, (uint16_t *)audio_buffer,
-                            T1_AUDIO_BUFFER_LEN);
     }
 }

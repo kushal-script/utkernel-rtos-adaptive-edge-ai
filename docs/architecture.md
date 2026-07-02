@@ -48,7 +48,8 @@ app/
   t3_features.*     MFCC and bypass gate                 (planned)
   t4_inference.*    model runner, precision, streaming   (planned)
   t5_controller.*   adaptation policy                    (planned)
-  config.h          window bounds, thresholds, budgets   (planned)
+  audio_probe.*     mic bring up capture over UART
+  app_config.h      buffer size, probe flag, tunables
 benchmark/
   dwt_logger.*      cycle counting and SWO logging
 audio/

@@ -20,7 +20,9 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 /* USER CODE BEGIN Includes */
+#include "app_config.h"
 extern DMA_HandleTypeDef hdma_spi2_rx;
+extern const int32_t *t1_get_buffer(void);
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -40,7 +42,8 @@ extern DMA_HandleTypeDef hdma_spi2_rx;
 
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN PV */
-
+static DMA_NodeTypeDef  spi2_rx_node;
+static DMA_QListTypeDef spi2_rx_queue;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -367,26 +370,57 @@ void HAL_I2S_MspInit(I2S_HandleTypeDef *hi2s)
     GPIO_InitStruct.Alternate = GPIO_AF5_SPI2;
     HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
-    /* GPDMA1 channel 0 for SPI2_RX. Word transfers (32-bit) match the
-     * 24-bit-in-32-bit-slot frame layout of the INMP441. Mode = NORMAL;
-     * the RxCpltCallback re-arms the DMA each block so capture stays
-     * continuous (Phase 2 will move to linked-list circular for zero gap). */
-    hdma_spi2_rx.Instance                  = GPDMA1_Channel0;
-    hdma_spi2_rx.Init.Request              = GPDMA1_REQUEST_SPI2_RX;
-    hdma_spi2_rx.Init.BlkHWRequest         = DMA_BREQ_SINGLE_BURST;
-    hdma_spi2_rx.Init.Direction            = DMA_PERIPH_TO_MEMORY;
-    hdma_spi2_rx.Init.SrcInc               = DMA_SINC_FIXED;
-    hdma_spi2_rx.Init.DestInc              = DMA_DINC_INCREMENTED;
-    hdma_spi2_rx.Init.SrcDataWidth         = DMA_SRC_DATAWIDTH_HALFWORD;
-    hdma_spi2_rx.Init.DestDataWidth        = DMA_DEST_DATAWIDTH_HALFWORD;
-    hdma_spi2_rx.Init.Priority             = DMA_LOW_PRIORITY_HIGH_WEIGHT;
-    hdma_spi2_rx.Init.SrcBurstLength       = 1;
-    hdma_spi2_rx.Init.DestBurstLength      = 1;
-    hdma_spi2_rx.Init.TransferAllocatedPort= DMA_SRC_ALLOCATED_PORT0 |
-                                             DMA_DEST_ALLOCATED_PORT0;
-    hdma_spi2_rx.Init.TransferEventMode    = DMA_TCEM_BLOCK_TRANSFER;
-    hdma_spi2_rx.Init.Mode                 = DMA_NORMAL;
-    if (HAL_DMA_Init(&hdma_spi2_rx) != HAL_OK)
+    /* GPDMA1 channel 0, SPI2 RX, circular linked-list so capture never gaps.
+       A single node describes the whole buffer and loops back to itself. The
+       I2S driver overwrites the node size, source, and destination at receive
+       start. Init.Mode must carry the circular value or I2S_DMARxCplt would
+       disable the DMA request after the first block. HALFWORD transfers pack
+       each 32-bit I2S slot as two beats. */
+    hdma_spi2_rx.Instance                   = GPDMA1_Channel0;
+    hdma_spi2_rx.Init.Request               = GPDMA1_REQUEST_SPI2_RX;
+    hdma_spi2_rx.Init.BlkHWRequest          = DMA_BREQ_SINGLE_BURST;
+    hdma_spi2_rx.Init.Direction             = DMA_PERIPH_TO_MEMORY;
+    hdma_spi2_rx.Init.SrcInc                = DMA_SINC_FIXED;
+    hdma_spi2_rx.Init.DestInc               = DMA_DINC_INCREMENTED;
+    hdma_spi2_rx.Init.SrcDataWidth          = DMA_SRC_DATAWIDTH_HALFWORD;
+    hdma_spi2_rx.Init.DestDataWidth         = DMA_DEST_DATAWIDTH_HALFWORD;
+    hdma_spi2_rx.Init.SrcBurstLength        = 1;
+    hdma_spi2_rx.Init.DestBurstLength       = 1;
+    hdma_spi2_rx.Init.TransferAllocatedPort = DMA_SRC_ALLOCATED_PORT0 |
+                                              DMA_DEST_ALLOCATED_PORT0;
+    hdma_spi2_rx.Init.TransferEventMode     = DMA_TCEM_BLOCK_TRANSFER;
+    hdma_spi2_rx.Init.Mode                  = DMA_LINKEDLIST_CIRCULAR;
+
+    hdma_spi2_rx.InitLinkedList.Priority          = DMA_LOW_PRIORITY_HIGH_WEIGHT;
+    hdma_spi2_rx.InitLinkedList.LinkStepMode      = DMA_LSM_FULL_EXECUTION;
+    hdma_spi2_rx.InitLinkedList.LinkAllocatedPort = DMA_LINK_ALLOCATED_PORT0;
+    hdma_spi2_rx.InitLinkedList.TransferEventMode = DMA_TCEM_BLOCK_TRANSFER;
+    hdma_spi2_rx.InitLinkedList.LinkedListMode    = DMA_LINKEDLIST_CIRCULAR;
+    if (HAL_DMAEx_List_Init(&hdma_spi2_rx) != HAL_OK)
+    {
+      Error_Handler();
+    }
+
+    DMA_NodeConfTypeDef node = {0};
+    node.NodeType   = DMA_GPDMA_LINEAR_NODE;
+    node.Init       = hdma_spi2_rx.Init;
+    node.Init.Mode  = DMA_NORMAL;
+    node.SrcAddress = (uint32_t)&SPI2->RXDR;
+    node.DstAddress = (uint32_t)t1_get_buffer();
+    node.DataSize   = T1_AUDIO_BUFFER_LEN * sizeof(int32_t);
+    if (HAL_DMAEx_List_BuildNode(&node, &spi2_rx_node) != HAL_OK)
+    {
+      Error_Handler();
+    }
+    if (HAL_DMAEx_List_InsertNode_Tail(&spi2_rx_queue, &spi2_rx_node) != HAL_OK)
+    {
+      Error_Handler();
+    }
+    if (HAL_DMAEx_List_SetCircularMode(&spi2_rx_queue) != HAL_OK)
+    {
+      Error_Handler();
+    }
+    if (HAL_DMAEx_List_LinkQ(&hdma_spi2_rx, &spi2_rx_queue) != HAL_OK)
     {
       Error_Handler();
     }

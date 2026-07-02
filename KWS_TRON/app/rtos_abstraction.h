@@ -2,13 +2,13 @@
 #include <tk/tkernel.h>
 
 /* Event flags */
-static inline void rtos_set_flag(ID flgid, FLGPTN ptn) {
+static inline void rtos_set_flag(ID flgid, UINT ptn) {
     tk_set_flg(flgid, ptn);
 }
-static inline void rtos_wait_flag(ID flgid, FLGPTN ptn, FLGPTN *out) {
+static inline void rtos_wait_flag(ID flgid, UINT ptn, UINT *out) {
     tk_wai_flg(flgid, ptn, TWF_ORW | TWF_BITCLR, out, TMO_FEVR);
 }
-static inline BOOL rtos_peek_flag(ID flgid, FLGPTN ptn) {
+static inline BOOL rtos_peek_flag(ID flgid, UINT ptn) {
     T_RFLG rflag;
     if (tk_ref_flg(flgid, &rflag) != E_OK) return FALSE;
     return (rflag.flgptn & ptn) ? TRUE : FALSE;

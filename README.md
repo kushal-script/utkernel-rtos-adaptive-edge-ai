@@ -27,6 +27,7 @@ Phase 1, audio ingest. Boot chain, 250 MHz clock, DWT cycle counter, µT-Kernel 
 * [Roadmap](docs/roadmap.md), milestones and exit criteria
 * [Novelty](docs/novelty.md), the research thesis and how it differs from standard TinyML
 * [Hardware](docs/hardware.md), board, mic wiring, clock tree, memory
+* [Mic verification](docs/mic_verification.md), the M1 bring up probe and host tool
 * [Benchmarking](docs/benchmarking.md), how latency, power, and accuracy are measured
 
 ## Build and flash

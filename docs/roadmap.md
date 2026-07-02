@@ -6,11 +6,11 @@ Milestones are capability based, not date based. Each one produces a working sys
 
 Boot chain, 250 MHz clock at VOS0, DWT cycle counter, µT-Kernel 3.0 with the STM32H533 BSP, a heartbeat task, and T1 starting an I2S DMA capture that sets event flags on half and full transfer.
 
-## M1, verified capture
+## M1, verified capture, in progress
 
-Convert T1 from one shot re-arm to a true circular double buffer so there is no gap between transfers. Stream raw PCM to the host over UART and confirm the INMP441 signal is real, correctly scaled, and correctly framed using `tools/check_mic_pcm.py`. Nothing downstream is trustworthy until the audio is verified.
+T1 now uses a true circular linked-list DMA on GPDMA1 with no re-arm gap, and a flag gated probe task streams framed raw capture over UART for `tools/check_mic_pcm.py`. Both build clean. What remains is the on hardware confirmation, that the INMP441 signal is real, correctly scaled, and correctly framed. Nothing downstream is trustworthy until the audio is verified. See [mic_verification.md](mic_verification.md).
 
-Exit: a plotted waveform on the host that responds to sound, with correct amplitude and no dropped blocks.
+Exit: a plotted waveform on the host that responds to sound, with correct amplitude, the driven slot carrying signal and the other near zero, and a small dc offset.
 
 ## M2, feature extraction
 
