@@ -39,6 +39,14 @@ The STM32H5 has no data cache, so DMA and CPU see the same memory with no flush 
 
 GPDMA1 clock and IRQ are enabled before I2S2 init, because `HAL_I2S_MspInit` links the DMA channel to the I2S handle. The channel configuration for SPI2 RX lives in `HAL_I2S_MspInit` in `Core/Src/stm32h5xx_hal_msp.c`.
 
+## I2S kernel clock
+
+SPI2 on the H5 has no PCLK or HSI kernel clock option, it must be fed from a PLL output, so it takes PLL1Q at 250 MHz. The HAL computes a divider of roughly 122 for 16 kHz at 64 bits per frame, which lands about 0.07 percent off the exact rate, well inside what the INMP441 tolerates. If low jitter ever matters, a dedicated audio PLL on PLL2P would give an exact ratio.
+
+## DMA transfer shape
+
+The GPDMA channel runs in circular linked list mode with a single node that describes the whole buffer and loops back to itself, so capture never gaps between blocks. The I2S driver overwrites the node size, source, and destination at receive start. `Init.Mode` must carry the circular value, otherwise the I2S receive complete handler disables the DMA request after the first block. Transfers are halfword wide because the I2S data register presents each 32 bit slot as two 16 bit beats.
+
 ## DWT cycle counter
 
 The DWT CYCCNT register is the timing source for the whole adaptation loop. `dwt_init` enables the trace unit and the cycle counter, `dwt_read` returns the count, and `dwt_log_layer` streams per layer cycle counts over SWO ITM port 0. See `benchmark/dwt_logger.c`.
