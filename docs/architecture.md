@@ -18,16 +18,19 @@ decisions flow from T5 back to the upstream tasks.
 
 | Task | Priority | Role | Owns |
 | :-- | :-- | :-- | :-- |
-| T1 | 5 | Ingest | The capture hardware, and the window resize the mailbox carries |
-| T2 | 6 | Variance monitor and gate | Block energy, the noise floor, the decision to run the pipeline at all |
-| T3 | 7 | Feature extract | MFCC frames, the quantised grid, the active frame count |
-| T4 | 8 | Inference engine | The model runner, per layer timing, weight streaming |
-| T5 | 3 | Adapt controller | Every adaptation decision, and only T5 writes adaptation state |
+| T5 | 2 | Adapt controller | Every adaptation decision, and only T5 writes adaptation state |
+| T1 | 3 | Ingest | The capture hardware, and the window resize the mailbox carries |
+| T2 | 4 | Variance monitor and gate | Block energy, the noise floor, the decision to run the pipeline at all |
+| T3 | 5 | Feature extract | Frame scheduling, the quantised grid, the active frame count |
+| T4 | 8, or 6 when urgent | Inference engine | The model runner, per layer timing, weight streaming |
 
-T5 runs at the highest priority of the five because a control decision is worth
-little if it arrives after the work it was meant to shape. T4 is normally the
-lowest, and T5 raises it to priority 4 with `tk_chg_pri` when a deadline is at
-risk.
+Lower is more urgent. T5 leads because a control decision is worth little if it
+arrives after the work it was meant to shape.
+
+T4 is last, and the urgent tier T5 promotes it to is still below the whole
+capture chain. That ordering is deliberate: letting a late inference outrank the
+task that drains the capture buffer would drop audio in order to save a
+deadline, which is a worse failure than the one being avoided.
 
 ## Inter task communication
 
