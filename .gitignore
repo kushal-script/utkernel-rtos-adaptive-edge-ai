@@ -26,5 +26,12 @@ Makefile
 mtk3bsp2_stm32h533.zip
 mtk3bsp2_h533_extracted/
 
+# Training corpora, fetched by model/fetch_dataset.sh, never committed
+model/datasets/
+
 # VS Code local overrides (keep .vscode config, ignore personal overrides)
 .vscode/*.log
+
+# Python bytecode
+__pycache__/
+*.py[cod]
