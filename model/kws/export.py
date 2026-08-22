@@ -161,8 +161,8 @@ def emit_model_source(layers, labels, cfg, input_quant, mean, std) -> str:
         .output_offset   = {layer.output_quant.zero_point},
         .input_scale     = {layer.input_quant.scale:.8e}f,
         .output_scale    = {layer.output_quant.scale:.8e}f,
-        .activation_min  = {-128 if layer.relu else -128},
-        .activation_max  = 127,
+        .activation_min  = {layer.activation_min},
+        .activation_max  = {layer.activation_max},
     }},"""
         )
 
@@ -354,16 +354,17 @@ def main():
         emit_eval_set(eval_q, test_y[picks].astype(np.uint8), cfg)
     )
 
-    raw = blob["test_raw"] if "test_raw" in blob else None
-    if raw is not None:
-        clip_idx = picks[: args.replay_clips]
-        (out_dir / "replay_data.h").write_text(
-            emit_replay_header(len(clip_idx), cfg)
-        )
+    # The cache keeps a small number of raw test clips, indexed from zero, so
+    # the replay source can stream real audio rather than features.
+    if "test_raw" in blob:
+        raw = blob["test_raw"]
+        raw_y = blob["test_raw_y"]
+        take = min(args.replay_clips, len(raw))
+        (out_dir / "replay_data.h").write_text(emit_replay_header(take, cfg))
         (out_dir / "replay_data.c").write_text(
             emit_replay_data(
-                [raw[i] for i in clip_idx],
-                test_y[clip_idx].astype(np.uint8),
+                [raw[i] for i in range(take)],
+                raw_y[:take].astype(np.uint8),
                 checkpoint["labels"],
                 cfg,
             )

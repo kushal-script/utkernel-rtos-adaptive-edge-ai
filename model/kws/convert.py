@@ -22,6 +22,8 @@ import torch
 from .features import FeatureConfig
 from .model import DSCNN
 from .quantize import (
+    INT8_MAX,
+    INT8_MIN,
     CONV,
     DEPTHWISE,
     FULLY_CONNECTED,
@@ -168,6 +170,13 @@ def assign_quantisation(layers, ranges, input_range):
         )
         layer.input_quant = current
         layer.output_quant = output_quant
+
+        # ReLU in the quantised domain clamps at the value that represents
+        # zero, which is the output zero point, not the byte zero.
+        layer.activation_min = (
+            output_quant.zero_point if layer.relu else INT8_MIN
+        )
+        layer.activation_max = INT8_MAX
         current = output_quant
     return layers
 
@@ -199,8 +208,9 @@ def run_layer_int8(layer: LayerSpec, x_q: np.ndarray) -> np.ndarray:
             ]
         )
         out = out + output_offset
-        low = 0 if layer.relu else -128
-        return np.clip(out, max(low, -128), 127).astype(np.int8).reshape(1, 1, -1)
+        return np.clip(
+            out, layer.activation_min, layer.activation_max
+        ).astype(np.int8).reshape(1, 1, -1)
 
     out_h, out_w, out_c = layer.out_shape
     kh, kw = layer.kernel
@@ -229,8 +239,9 @@ def run_layer_int8(layer: LayerSpec, x_q: np.ndarray) -> np.ndarray:
                 ]
             )
             requantised = requantised + output_offset
-            low = 0 if layer.relu else -128
-            result[oh, ow] = np.clip(requantised, max(low, -128), 127).astype(np.int8)
+            result[oh, ow] = np.clip(
+                requantised, layer.activation_min, layer.activation_max
+            ).astype(np.int8)
     return result
 
 

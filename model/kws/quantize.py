@@ -59,6 +59,8 @@ class LayerSpec:
     shift: np.ndarray = field(default=None, repr=False)
     input_quant: QuantTensor = None
     output_quant: QuantTensor = None
+    activation_min: int = INT8_MIN
+    activation_max: int = INT8_MAX
 
 
 def quantise_multiplier(real_multiplier: float):

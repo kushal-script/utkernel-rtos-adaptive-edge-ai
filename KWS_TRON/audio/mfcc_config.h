@@ -1,11 +1,28 @@
 #pragma once
 
+/* Feature geometry. Mirrors FeatureConfig in model/kws/features.py, which is
+   the single source of truth. Changing anything here means regenerating the
+   exported tables and the model. The 30 ms frame with a 20 ms hop yields 49
+   frames over one second, the input shape used by the published keyword
+   spotting networks this project is compared against. */
+
 #define SAMPLE_RATE_HZ      16000
-#define FRAME_SIZE_SAMPLES  480     /* 30 ms at 16 kHz */
-#define FRAME_STRIDE_MS     10
+#define CLIP_SAMPLES        16000
+
+#define FRAME_SIZE_SAMPLES  480     /* 30 ms analysis frame */
+#define FRAME_STRIDE_SAMPLES 320    /* 20 ms hop */
+#define FFT_SIZE            512     /* smallest power of two holding a frame */
+#define FFT_BINS            (FFT_SIZE / 2 + 1)
+
 #define MEL_BINS            40
 #define MFCC_COEFFS         10
-#define FFT_SIZE            512
+#define MFCC_FRAMES         49      /* 1 + (CLIP_SAMPLES - FRAME) / STRIDE */
+
+#define MEL_LOW_HZ          20.0f
+#define MEL_HIGH_HZ         4000.0f
+#define MEL_LOG_FLOOR       1e-6f
+
+/* Adaptive capture window bounds from the program plan, in samples. */
 #define WINDOW_MIN_SAMPLES  64
 #define WINDOW_MAX_SAMPLES  256
 #define WINDOW_STEP         16
