@@ -1,47 +1,49 @@
-# Mic verification (M1)
+# Microphone bring up
 
-Proves the INMP441 produces real, correctly framed audio before any feature or model work is built on top of it. Two pieces, a firmware probe and a host capture tool.
+The pipeline runs from the flash replay source by default, and a microphone is
+not needed for any result the project claims. This describes what to do when one
+is attached and a live demonstration is wanted.
 
-## Firmware probe
+## Switching the source
 
-`app/audio_probe.c` is a bring up task compiled in only when `KWS_AUDIO_PROBE` is set in `app/app_config.h`. It collects a snapshot of the raw circular capture buffer, `PROBE_SNAP_FRAMES` stereo frames, and streams it over UART, then repeats after a short delay. It reads the same T1 event flags as the rest of the pipeline, so it also exercises the circular DMA path.
+Set `KWS_SIGNAL_SOURCE` to `KWS_SOURCE_I2S` in `app/app_config.h` and rebuild.
+Nothing above the source interface changes. The I2S path claims GPDMA1 channel 0
+and the replay path claims channel 1, so the two never contend.
 
-Set `KWS_AUDIO_PROBE` to 0 for normal builds. When the probe is on, the heartbeat task keeps toggling LD2 but does not print, so the UART carries only binary snapshot frames.
+Wiring is in [hardware.md](hardware.md). The INMP441 delivers 24 bit samples in
+32 bit slots and the source narrows the completed block to the 16 bit stream the
+rest of the pipeline expects before any consumer sees it.
 
-## Frame format
+## What to check, in order
 
-Little endian, streamed on USART2 at 115200 baud.
+The replay source is the reference. Anything the microphone path does that the
+replay path does not is a microphone problem, which makes bring up a comparison
+rather than a hunt.
 
-```
-offset  size  field
-0       4     magic "SNAP"
-4       1     version, 1
-5       1     channels, 2
-6       1     bytes per sample, 4
-7       1     reserved
-8       4     sample rate, 16000
-12      4     frame count
-16      n     payload, frame_count * channels * int32, left then right
-16+n    4     sum, arithmetic sum of the payload words modulo 2^32
-```
+Confirm the capture cadence first. Blocks should arrive at the window length
+divided by 16 kHz, so 16 ms at the default 256 sample window, and
+`signal_source_overruns` should stay at zero. A cadence that is wrong by a large
+factor means the I2S clock is wrong, not the microphone.
 
-Each 32 bit word is one I2S slot. The INMP441 drives one slot, the other stays near zero, which is how the host confirms channel framing.
+Then confirm the signal is real. The energy T2 reports should sit near the noise
+floor in a quiet room and rise clearly when you speak. If it never moves, the
+data slot is wrong or the microphone's channel select pin is tied the wrong way.
+If it is pinned high regardless of sound, the slot is picking up the unused
+channel.
 
-## Host tool
+Then confirm the features are sane. A sustained tone should put energy in a
+stable set of mel bands. `tools/verify_device_core.py` already proves the
+transform itself is correct, so a feature problem at this point is a capture
+problem.
 
-```
-source setup_env.sh
-python tools/check_mic_pcm.py /dev/tty.usbmodemXXXX
-```
+Finally confirm classification. Speaking one of the ten keywords should raise
+that class. Accuracy is not measured this way, it is measured on the labelled
+evaluation set, because a live microphone has no ground truth.
 
-Use `serial-port` from `setup_env.sh` to find the device name. The tool resyncs on the magic, checks the sum, de-interleaves the two slots, and prints statistics.
+## Known unknowns
 
-* left rms above the noise floor means the mic is responding
-* right rms near zero confirms the mic drives a single slot and the framing is correct
-* dc offset near zero confirms no stuck bias
-
-It saves the raw capture and a waveform plot into `experiments/<timestamp>_mic-verify/`.
-
-## Passing M1
-
-Speak or tap near the mic while capturing. The saved waveform should track the sound, the left channel should show clear signal above the noise floor, the right channel should stay near zero, and the dc offset should be small. Once that holds, M1 is done and feature extraction can begin.
+The I2S path has not run on hardware in its current form. The clock choice, the
+divider rate error, and the transfer shape are recorded in
+[hardware.md](hardware.md), and the previous revision of this path did reach a
+working DMA configuration, but the narrowing step and the source interface are
+new and unproven.

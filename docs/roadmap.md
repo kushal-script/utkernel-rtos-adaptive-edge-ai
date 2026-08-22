@@ -1,51 +1,91 @@
 # Roadmap
 
-Milestones are capability based, not date based. Each one produces a working system that adds a layer of intelligence over the previous. Every milestone ends with a commit, and any run that produces numbers writes its results into `experiments/`.
+Milestones are capability based, not date based. Each one produces a working
+system that adds a layer of intelligence over the previous. Every milestone ends
+with a commit, and any run that produces numbers writes its results into
+`experiments/`.
 
 ## M0, boot and kernel, done
 
-Boot chain, 250 MHz clock at VOS0, DWT cycle counter, µT-Kernel 3.0 with the STM32H533 BSP, a heartbeat task, and T1 starting an I2S DMA capture that sets event flags on half and full transfer.
+Boot chain, 250 MHz clock at VOS0, DWT cycle counter, µT-Kernel 3.0 with the
+STM32H533 BSP, and a heartbeat task.
 
-## M1, verified capture, in progress
+## M1, capture path, done in software
 
-T1 now uses a true circular linked-list DMA on GPDMA1 with no re-arm gap, and a flag gated probe task streams framed raw capture over UART for `tools/check_mic_pcm.py`. Both build clean. What remains is the on hardware confirmation, that the INMP441 signal is real, correctly scaled, and correctly framed. Nothing downstream is trustworthy until the audio is verified. See [mic_verification.md](mic_verification.md).
+The signal source is behind one interface. The default streams a labelled
+corpus from flash through GPDMA paced by a timer, which drives the same
+circular buffer, the same interrupt per block, and the same event flag a sensor
+would. The microphone path is kept behind the same interface for when one is
+attached. See [signal_source.md](signal_source.md).
 
-Exit: a plotted waveform on the host that responds to sound, with correct amplitude, the driven slot carrying signal and the other near zero, and a small dc offset.
+Exit, on hardware: blocks arrive at the window length divided by 16 kHz, the
+capture buffer holds the corpus rather than noise, and the overrun count stays
+at zero.
 
-## M2, feature extraction
+## M2, feature extraction, done in software
 
-T3 computes MFCC features on a fixed window with CMSIS-DSP for the FFT. Validate the on device features against a NumPy reference on the same input, within a small tolerance.
+T3 computes MFCC frames with the in tree transform and the exported tables, and
+maintains the quantised 49 by 10 grid the model reads directly. The transform
+agrees with the NumPy reference to four parts in a million and the host front
+end is the single source of truth for the tables.
 
-Exit: on device MFCC matches the host reference for a known test tone.
+Exit, on hardware: device features match the host reference for the same
+recorded input within tolerance.
 
-## M3, baseline inference
+## M3, baseline inference, done in software
 
-T4 runs the hand written DS-CNN core at fixed INT8 precision on a fixed window, using CMSIS-NN kernels. Measure per inference and per layer latency with the DWT and classification accuracy on a held out set. This is the static baseline that every adaptive result is compared against, and the same core that M5 makes precision switchable.
+T4 runs the hand written per layer core. On the host the core reaches 94 percent
+on the on device evaluation set, identically under full INT8, full FP32, and
+alternating per layer precision, and reproduces the golden reference logits to
+five parts in a hundred million. The trained model is 92.8 percent on the full
+twelve class test set with 23,180 parameters.
 
-Exit: a stated baseline number for latency and accuracy, logged in `experiments/`.
+Exit, on hardware: the same accuracy on the same evaluation set, with the per
+inference and per layer cycle counts recorded in `experiments/`.
 
-## M4, first adaptation
+## M4, first adaptation, done in software
 
-T2 variance monitor and the VAD gate. On flat or low energy frames the pipeline skips T3 and T4 entirely rather than running the model on silence. Adaptive window sizing through a mailbox from T5 to T1.
+T2 gates the pipeline on silence so T3 and T4 do not run at all, and the
+controller varies the capture window and the active frame count. The accuracy
+cost of every active frame setting is measured and plotted by the training run.
 
-Exit: measured reduction in average work on quiet input with no loss of keyword recall.
+Exit, on hardware: a measured reduction in average work on quiet input with no
+loss of keyword recall.
 
-## M5, closed loop, centerpiece
+## M5, closed loop, centerpiece, done in software
 
-T5 reads the per layer DWT budget and signal state every cycle and drives adaptation together: window size, feature gating, and per layer numeric precision in the hand written core, plus priority changes under load. The controller is self tuning, it adjusts its variance and budget thresholds to the observed environment at runtime rather than using fixed constants. This is the contribution the contest rewards and the research angle for a later paper, the RTOS as a controller that learns its own policy.
+T5 reads the per layer timing and the signal state and drives precision,
+window, active frames, and task priority together. Its thresholds are learned,
+the gate is placed relative to an online noise floor and the budget relative to
+the observed cost.
 
-Exit: the adaptive pipeline holds a hard per inference deadline while cutting average power at a stated accuracy cost versus the M3 baseline, and the self tuning thresholds are shown to converge and to beat the best fixed thresholds.
+Exit, on hardware: the adaptive pipeline holds the per inference deadline while
+cutting average work at a stated accuracy cost against the static baseline, and
+the learned thresholds are shown to converge and to beat the best fixed
+thresholds found by sweep.
 
-## M6, benchmark harness
+## M6, benchmark harness, partly done
 
-Automated static versus adaptive comparison across three axes, latency worst case bound from the DWT, average power from the SMPS, and accuracy. Plots generated into `experiments/`. This produces the headline result for the writeup.
+The on device harness scores the evaluation set under static and adaptive
+configurations and reports latency, accuracy, and the per layer profile outside
+every timed region. `tools/parse_bench.py` turns that report into an experiment
+folder with figures.
+
+What remains is the power axis, which needs the board and the SMPS, and the
+headline figure itself, which needs real numbers rather than a harness.
 
 Exit: one reproducible figure that shows the tradeoff the project claims.
 
 ## M7, stretch
 
-TrustZone secure world weight isolation and larger model memory pool streaming. These strengthen the story but are separable from the core thesis and can be cut without weakening it. See [novelty.md](novelty.md).
+TrustZone secure world weight isolation. It strengthens the model protection
+story but is separable from the co-optimisation thesis and can be cut without
+weakening it. See [novelty.md](novelty.md).
 
-## Recommended structural change
+## Current position
 
-The firmware directory is named `KWS_TRON`. Renaming it to `firmware/` reads better for outside contributors, but it touches CMake paths, the flash alias, and editor launch configs, so it is deferred until a quiet point between milestones rather than mid feature.
+Everything above that is marked done in software builds, fits, and is validated
+against a golden reference on the host. Nothing has run on the board yet, which
+is the single gap between the present state and a submittable result. The
+verification steps are listed per milestone above and collected in
+[benchmarking.md](benchmarking.md).

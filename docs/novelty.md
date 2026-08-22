@@ -29,9 +29,9 @@ A model trained on MFCC features cannot be handed a zero padded vector and be re
 
 TFLite Micro builds a static graph. A layer's datatype cannot be flipped mid inference inside its interpreter, so this project does not use the TFLM interpreter for the inference core.
 
-Decided path, a hand written DS-CNN core of a few hundred lines using CMSIS-NN INT8 kernels with an FP32 fallback, where per layer precision is genuinely selectable at runtime. T5 reads the per layer DWT cycle count, and when a layer overruns its budget it drops the next layer to INT8 before the deadline is missed. This delivers the true per layer switch the proposal describes and gives a cleaner per layer timing story than the interpreter would. Whole model variant selection, swapping two prebuilt models by DWT slack, is kept only as an optional bootstrap for the first baseline in M3.
+Decided path, a hand written DS-CNN core where per layer precision is genuinely selectable at runtime. The layer kernels and the transform are in the tree rather than pulled from a library, so the build is self contained and every cycle the benchmark reports belongs to code in this repository. T5 reads the per layer DWT cycle count, and when a layer overruns its budget it drops the next layer to INT8 before the deadline is missed. This delivers the true per layer switch the proposal describes and gives a cleaner per layer timing story than the interpreter would. Whole model variant selection, swapping two prebuilt models by DWT slack, is kept only as an optional bootstrap for the first baseline in M3.
 
-Correct the mechanism description too. The INT8 speedup on Cortex-M33 comes from CMSIS-NN packed SIMD multiply accumulate, SMLAD, and from avoiding the FPU, not from an ALU that does an INT8 MAC in one cycle versus four for FP32 on the same unit. The honest claim is that INT8 kernels are roughly two to four times faster and lower energy than FP32 kernels, measured with the DWT.
+Correct the mechanism description too. The INT8 advantage on this part comes from weights being a quarter of the size and so a quarter of the memory traffic, from packed multiply accumulate through the DSP extension, and from not moving values through the floating point register file. It does not come from an ALU that does an INT8 multiply accumulate in one cycle against four for FP32, and that figure should not be repeated. The honest claim is the ratio measured on this silicon for the same model and the same input.
 
 ### Memory pool streaming needs a model large enough to justify it
 
@@ -45,6 +45,8 @@ Secure world weight isolation is real on the M33 but costs a secure and non secu
 
 T5 is a self tuning controller, not a fixed threshold if else. It adds online hysteresis and a lightweight policy, for example an adaptive threshold rule or a small contextual bandit, that adjusts its variance and budget thresholds to the observed acoustic environment at runtime. The framing, the RTOS learns its own adaptation policy on device, is the fresh research angle that separates this work from any fixed adaptive scheme, and it is only a few hundred lines on top of the fixed threshold loop. The self tuning policy must be shown to converge and to beat the best hand tuned fixed thresholds, otherwise it is decoration.
 
-## Immediate next engineering step
+## Where the claim currently stands
 
-Fix T1 to a true circular DMA and verify captured audio on the host before building anything on top of it. Features and inference on unverified audio are wasted effort.
+Every mechanism above is implemented and builds. The inference core, the transform, and the quantised graph are validated against a golden reference on the host, so the arithmetic is settled. The trained model reaches 92.8 percent on the twelve class task, and the core holds 94 percent on the on device evaluation set identically under full INT8, full FP32, and alternating per layer precision, which is the evidence that a precision switch preserves meaning rather than merely running.
+
+What is missing is the board. Not one cycle count, and therefore not one claim about latency or power, has been measured on silicon. Until that changes, the honest description of this work is a complete and verified implementation with an unmeasured headline result. The checks that close the gap are listed in [benchmarking.md](benchmarking.md).
