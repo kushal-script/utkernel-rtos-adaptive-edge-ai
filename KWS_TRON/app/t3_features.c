@@ -7,7 +7,7 @@
 
 #include "dwt_logger.h"
 #include "ipc_objects.h"
-#include "kws_fft.h"
+#include "kws_features.h"
 #include "kws_model.h"
 #include "mfcc_tables.h"
 #include "signal_source.h"
@@ -16,56 +16,11 @@
 t3_stats_t t3_stats;
 int8_t t3_feature_grid[KWS_FRAMES * KWS_COEFFS];
 
-static float frame_buffer[FFT_SIZE];
-static float power[FFT_BINS];
-static float mel_energy[MEL_BINS];
 static int16_t raw_frame[FRAME_SIZE_SAMPLES];
 
 /* Rows are written oldest first and the grid is rotated once it is full, so
    the inference core always reads a contiguous, time ordered tensor. */
 static uint32_t rows_filled;
-
-static int8_t quantise_feature(float value)
-{
-    float q = value / kws_input_scale + (float)kws_input_zero_point;
-    int32_t rounded = (int32_t)lrintf(q);
-    if (rounded < -128) {
-        rounded = -128;
-    } else if (rounded > 127) {
-        rounded = 127;
-    }
-    return (int8_t)rounded;
-}
-
-void t3_compute_frame(const int16_t *samples, float *mfcc_out)
-{
-    for (uint32_t i = 0; i < FRAME_SIZE_SAMPLES; i++) {
-        frame_buffer[i] = ((float)samples[i] / 32768.0f) * mfcc_window[i];
-    }
-    for (uint32_t i = FRAME_SIZE_SAMPLES; i < FFT_SIZE; i++) {
-        frame_buffer[i] = 0.0f;
-    }
-
-    kws_fft_power(frame_buffer, power);
-
-    for (uint32_t m = 0; m < MEL_BINS; m++) {
-        const float *row = &mfcc_filterbank[m * FFT_BINS];
-        float sum = 0.0f;
-        for (uint32_t b = 0; b < FFT_BINS; b++) {
-            sum += row[b] * power[b];
-        }
-        mel_energy[m] = logf(sum > MEL_LOG_FLOOR ? sum : MEL_LOG_FLOOR);
-    }
-
-    for (uint32_t c = 0; c < MFCC_COEFFS; c++) {
-        const float *row = &mfcc_dct[c * MEL_BINS];
-        float sum = 0.0f;
-        for (uint32_t m = 0; m < MEL_BINS; m++) {
-            sum += row[m] * mel_energy[m];
-        }
-        mfcc_out[c] = sum;
-    }
-}
 
 static void push_row(const float *mfcc)
 {
@@ -77,8 +32,7 @@ static void push_row(const float *mfcc)
 
     int8_t *row = &t3_feature_grid[rows_filled * KWS_COEFFS];
     for (uint32_t c = 0; c < KWS_COEFFS; c++) {
-        float standardised = (mfcc[c] - kws_feature_mean[c]) / kws_feature_std[c];
-        row[c] = quantise_feature(standardised);
+        row[c] = kws_feature_quantise(mfcc[c], c);
     }
     rows_filled++;
     t3_stats.grid_writes++;
@@ -144,7 +98,7 @@ void t3_features_task(INT stacd, void *exinf)
             }
 
             uint32_t started = dwt_read();
-            t3_compute_frame(raw_frame, mfcc);
+            kws_feature_frame(raw_frame, mfcc);
             t3_stats.last_frame_cycles = dwt_read() - started;
             t3_stats.frames_computed++;
 

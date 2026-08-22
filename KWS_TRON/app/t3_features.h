@@ -37,10 +37,6 @@ extern int8_t t3_feature_grid[KWS_FRAMES * KWS_COEFFS];
 
 void t3_features_task(INT stacd, void *exinf);
 
-/* Computes one MFCC frame from windowed samples. Exposed so the host
-   comparison tool can drive it on a known input without the task running. */
-void t3_compute_frame(const int16_t *samples, float *mfcc_out);
-
 /* Rewrites the grid so only `active` rows hold data, the rest read as zero in
    the model's input space. Called when the controller changes the window. */
 void t3_apply_active_frames(uint32_t active);

@@ -46,15 +46,46 @@ def _c_array(name, values, ctype, per_line=12, fmt=None):
     return "\n".join(lines)
 
 
+def sparse_filterbank(filterbank: np.ndarray):
+    """Triangular mel filters touch a handful of bins each, so store only those.
+
+    Returns (start, length, weights). Every band is contiguous, which is a
+    property of triangular filters on a monotonic frequency grid, and is
+    asserted here because the device loop depends on it.
+    """
+    starts, lengths, weights = [], [], []
+    for row in filterbank:
+        nonzero = np.nonzero(row)[0]
+        if nonzero.size == 0:
+            starts.append(0)
+            lengths.append(0)
+            continue
+        first, last = int(nonzero[0]), int(nonzero[-1])
+        assert last - first + 1 == nonzero.size, "mel band is not contiguous"
+        starts.append(first)
+        lengths.append(last - first + 1)
+        weights.extend(row[first : last + 1].tolist())
+    return (
+        np.asarray(starts, dtype=np.uint16),
+        np.asarray(lengths, dtype=np.uint16),
+        np.asarray(weights, dtype=np.float32),
+    )
+
+
 def emit_mfcc_tables(cfg: FeatureConfig) -> str:
     extractor = MfccExtractor(cfg)
+    starts, lengths, weights = sparse_filterbank(extractor.filterbank)
     parts = [
         GENERATED_NOTE,
         '#include "mfcc_tables.h"',
         "",
         _c_array("mfcc_window", extractor.window, "float"),
         "",
-        _c_array("mfcc_filterbank", extractor.filterbank, "float"),
+        _c_array("mfcc_band_start", starts, "uint16_t", 16),
+        "",
+        _c_array("mfcc_band_length", lengths, "uint16_t", 16),
+        "",
+        _c_array("mfcc_band_weight", weights, "float"),
         "",
         _c_array("mfcc_dct", extractor.dct, "float"),
         "",
@@ -63,16 +94,27 @@ def emit_mfcc_tables(cfg: FeatureConfig) -> str:
 
 
 def emit_mfcc_tables_header(cfg: FeatureConfig) -> str:
+    extractor = MfccExtractor(cfg)
+    _, _, weights = sparse_filterbank(extractor.filterbank)
+    dense = cfg.n_mel * cfg.n_bins
     return f"""{GENERATED_NOTE}
 #pragma once
+
+#include <stdint.h>
 
 #include "mfcc_config.h"
 
 /* Window is applied to one {cfg.frame_samples} sample frame before the transform. */
 extern const float mfcc_window[{cfg.frame_samples}];
 
-/* Row major, {cfg.n_mel} mel bands by {cfg.n_bins} spectrum bins. */
-extern const float mfcc_filterbank[{cfg.n_mel * cfg.n_bins}];
+/* Mel filterbank in sparse form. A triangular filter is non zero over only a
+   few neighbouring bins, {weights.size} across all {cfg.n_mel} bands against
+   {dense} for the dense matrix, so the sparse form is both far smaller in flash
+   and far cheaper per frame. Each band covers a contiguous run of bins. */
+#define MFCC_BAND_WEIGHTS {weights.size}
+extern const uint16_t mfcc_band_start[{cfg.n_mel}];
+extern const uint16_t mfcc_band_length[{cfg.n_mel}];
+extern const float    mfcc_band_weight[MFCC_BAND_WEIGHTS];
 
 /* Row major, {cfg.n_mfcc} coefficients by {cfg.n_mel} mel bands. */
 extern const float mfcc_dct[{cfg.n_mfcc * cfg.n_mel}];

@@ -8,7 +8,9 @@ set(CMAKE_CXX_STANDARD 17)
 set(LINKER_SCRIPT ${CMAKE_SOURCE_DIR}/STM32H533RETX_FLASH.ld)
 
 # ── Source files ─────────────────────────────────────────────────────────────
-file(GLOB_RECURSE APP_SOURCES
+# CONFIGURE_DEPENDS so a newly added source is picked up without a manual
+# reconfigure, which is otherwise a confusing undefined reference at link time.
+file(GLOB_RECURSE APP_SOURCES CONFIGURE_DEPENDS
     "app/*.c"
     "audio/*.c"
     "benchmark/*.c"

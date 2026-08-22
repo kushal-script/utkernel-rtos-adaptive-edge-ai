@@ -3,13 +3,21 @@
 
 #pragma once
 
+#include <stdint.h>
+
 #include "mfcc_config.h"
 
 /* Window is applied to one 480 sample frame before the transform. */
 extern const float mfcc_window[480];
 
-/* Row major, 40 mel bands by 257 spectrum bins. */
-extern const float mfcc_filterbank[10280];
+/* Mel filterbank in sparse form. A triangular filter is non zero over only a
+   few neighbouring bins, 247 across all 40 bands against
+   10280 for the dense matrix, so the sparse form is both far smaller in flash
+   and far cheaper per frame. Each band covers a contiguous run of bins. */
+#define MFCC_BAND_WEIGHTS 247
+extern const uint16_t mfcc_band_start[40];
+extern const uint16_t mfcc_band_length[40];
+extern const float    mfcc_band_weight[MFCC_BAND_WEIGHTS];
 
 /* Row major, 10 coefficients by 40 mel bands. */
 extern const float mfcc_dct[400];

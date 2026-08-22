@@ -38,6 +38,21 @@ int main(void){
 }
 """
 
+MFCC_HARNESS = r"""
+#include <stdio.h>
+#include "kws_features.h"
+int main(void){
+    kws_features_init();
+    static int16_t frame[FRAME_SIZE_SAMPLES];
+    static float mfcc[MFCC_COEFFS];
+    int v;
+    for(int i=0;i<FRAME_SIZE_SAMPLES;i++){ if(scanf("%d",&v)!=1) return 1; frame[i]=(int16_t)v; }
+    kws_feature_frame(frame, mfcc);
+    for(int c=0;c<MFCC_COEFFS;c++) printf("%.9e\n", mfcc[c]);
+    return 0;
+}
+"""
+
 INFER_HARNESS = r"""
 #include <stdio.h>
 #include <stdlib.h>
@@ -90,6 +105,41 @@ def check_transform(work: Path) -> bool:
 
     ok = worst < 1e-4
     print(f"  transform vs NumPy   max relative error {worst:.2e}   {'pass' if ok else 'FAIL'}")
+    return ok
+
+
+def check_features(work: Path) -> bool:
+    """The whole frame path, including the sparse mel projection and the DCT."""
+    from kws.features import FeatureConfig, MfccExtractor
+
+    cfg = FeatureConfig()
+    extractor = MfccExtractor(cfg)
+    binary = compile_harness(
+        work, "mfcc_check", MFCC_HARNESS,
+        ["kws_features.c", "kws_fft.c", "mfcc_tables.c", "kws_model.c"],
+    )
+
+    rng = np.random.default_rng(11)
+    worst = 0.0
+    for trial in range(6):
+        if trial == 0:
+            t = np.arange(cfg.frame_samples) / cfg.sample_rate
+            wave = np.sin(2 * np.pi * 440 * t) * 0.4
+        elif trial == 1:
+            wave = np.zeros(cfg.frame_samples)
+        else:
+            wave = rng.standard_normal(cfg.frame_samples) * 0.2
+        pcm = np.clip(np.round(wave * 32768.0), -32768, 32767).astype(np.int16)
+
+        stdin = "\n".join(str(int(v)) for v in pcm)
+        out = subprocess.run([str(binary)], input=stdin, capture_output=True, text=True)
+        got = np.array([float(v) for v in out.stdout.split()])
+        ref = extractor.mfcc_frame(pcm.astype(np.float32) / 32768.0)
+        scale = max(1.0, float(np.abs(ref).max()))
+        worst = max(worst, float(np.abs(got - ref).max() / scale))
+
+    ok = worst < 1e-3
+    print(f"  MFCC frame vs NumPy  max relative error {worst:.2e}   {'pass' if ok else 'FAIL'}")
     return ok
 
 
@@ -146,6 +196,7 @@ def main() -> int:
     with tempfile.TemporaryDirectory() as tmp:
         work = Path(tmp)
         passed = check_transform(work)
+        passed = check_features(work) and passed
         passed = check_inference(work) and passed
 
     print("all checks passed" if passed else "FAILURES, see above")

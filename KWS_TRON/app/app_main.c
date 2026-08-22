@@ -4,7 +4,7 @@
 #include "app_config.h"
 #include "app_tasks.h"
 #include "ipc_objects.h"
-#include "kws_fft.h"
+#include "kws_features.h"
 #include "signal_source.h"
 #include "t1_ingest.h"
 #include "t2_variance.h"
@@ -63,7 +63,7 @@ EXPORT INT usermain(void)
 
     out_w(GPIO_ODR(A), in_w(GPIO_ODR(A)) & ~(1 << 5));
 
-    kws_fft_init();
+    kws_features_init();
 
     if (ipc_objects_init() != E_OK) {
         tm_putstring((UB *)"usermain: kernel objects failed, halting\n");

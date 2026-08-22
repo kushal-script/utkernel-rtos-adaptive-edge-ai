@@ -84,12 +84,13 @@ app/
   sample_ring.*     the buffer between capture and features
   t1_ingest.*       capture ownership and window resize
   t2_variance.*     energy, the noise floor, the gate
-  t3_features.*     MFCC frames and the quantised grid
+  t3_features.*     frame scheduling and the quantised grid
   t4_inference.*    the RTOS wrapper around the core
   t5_controller.*   the adaptation policy
 audio/
   mfcc_config.h     feature geometry, mirrors the host front end
   kws_fft.*         the transform
+  kws_features.*    one MFCC frame, kernel free so a host can check it
   kws_kernels.*     INT8 and FP32 layer kernels
   kws_infer.*       the kernel free model runner
   kws_layer.h       the layer descriptor format
