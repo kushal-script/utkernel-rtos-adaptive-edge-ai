@@ -81,9 +81,9 @@ void t2_variance_task(INT stacd, void *exinf)
 
         if (active) {
             t2_stats.blocks_active++;
-            tk_set_flg(flgid_pipeline, FLG_VOICE_ACTIVE);
+            tk_set_flg(flgid_features, FLG_VOICE_ACTIVE);
         } else {
-            tk_set_flg(flgid_pipeline, FLG_QUIESCENT);
+            tk_set_flg(flgid_control, FLG_QUIESCENT);
         }
     }
 }

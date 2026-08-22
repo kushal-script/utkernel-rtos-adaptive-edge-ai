@@ -68,7 +68,7 @@
 /*---------------------------------------------------------------------- */
 /* Stack size definition
  */
-#define CNF_EXC_STACK_SIZE	(0)	/* Exception stack size */
+#define CNF_EXC_STACK_SIZE	(0x400)	/* Exception stack size, must be non zero or the kernel heap upper bound overlaps the main stack */
 #define	CNF_TMP_STACK_SIZE	(256)	/* Temporary stack size */
 
 

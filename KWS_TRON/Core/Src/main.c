@@ -12,12 +12,15 @@
 #include <stdio.h>
 #include <string.h>
 #include "dwt_logger.h"
+#include "app_config.h"
 
 ADC_HandleTypeDef hadc1;
 I2C_HandleTypeDef hi2c1;
 UART_HandleTypeDef huart2;
+#if KWS_SIGNAL_SOURCE == KWS_SOURCE_I2S
 I2S_HandleTypeDef hi2s2;
 DMA_HandleTypeDef hdma_spi2_rx;
+#endif
 
 void SystemClock_Config(void);
 static void MPU_Config(void);
@@ -27,7 +30,9 @@ static void MX_USART2_UART_Init(void);
 static void MX_ADC1_Init(void);
 static void MX_I2C1_Init(void);
 static void MX_GPDMA1_Init(void);
+#if KWS_SIGNAL_SOURCE == KWS_SOURCE_I2S
 static void MX_I2S2_Init(void);
+#endif
 
 int main(void)
 {
@@ -44,7 +49,9 @@ int main(void)
 
   /* GPDMA1 before I2S2, HAL_I2S_MspInit links the channel. */
   MX_GPDMA1_Init();
+#if KWS_SIGNAL_SOURCE == KWS_SOURCE_I2S
   MX_I2S2_Init();
+#endif
 
   /* DWT cycle counter, with a one shot sanity print of cycles per ms. */
   dwt_init();
@@ -241,6 +248,7 @@ static void MX_GPDMA1_Init(void)
   HAL_NVIC_EnableIRQ(GPDMA1_Channel0_IRQn);
 }
 
+#if KWS_SIGNAL_SOURCE == KWS_SOURCE_I2S
 /* I2S2 master RX from the INMP441 at 16 kHz. Wiring and rationale in docs/hardware.md. */
 static void MX_I2S2_Init(void)
 {
@@ -260,6 +268,7 @@ static void MX_I2S2_Init(void)
     Error_Handler();
   }
 }
+#endif
 
 void MPU_Config(void)
 {

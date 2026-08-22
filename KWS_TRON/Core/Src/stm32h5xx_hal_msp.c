@@ -10,11 +10,14 @@
 #include "main.h"
 #include "app_config.h"
 
+#if KWS_SIGNAL_SOURCE == KWS_SOURCE_I2S
 extern DMA_HandleTypeDef hdma_spi2_rx;
-extern const int32_t *t1_get_buffer(void);
+extern const int32_t *signal_source_i2s_buffer(void);
+extern uint32_t signal_source_i2s_words(void);
 
 static DMA_NodeTypeDef  spi2_rx_node;
 static DMA_QListTypeDef spi2_rx_queue;
+#endif
 
 void HAL_MspInit(void)
 {
@@ -149,6 +152,7 @@ void HAL_UART_MspDeInit(UART_HandleTypeDef* huart)
   }
 }
 
+#if KWS_SIGNAL_SOURCE == KWS_SOURCE_I2S
 /* INMP441 wiring, kernel clock choice, and DMA shape are in docs/hardware.md. */
 void HAL_I2S_MspInit(I2S_HandleTypeDef *hi2s)
 {
@@ -206,8 +210,8 @@ void HAL_I2S_MspInit(I2S_HandleTypeDef *hi2s)
     node.Init       = hdma_spi2_rx.Init;
     node.Init.Mode  = DMA_NORMAL;
     node.SrcAddress = (uint32_t)&SPI2->RXDR;
-    node.DstAddress = (uint32_t)t1_get_buffer();
-    node.DataSize   = T1_AUDIO_BUFFER_LEN * sizeof(int32_t);
+    node.DstAddress = (uint32_t)signal_source_i2s_buffer();
+    node.DataSize   = signal_source_i2s_words() * sizeof(int32_t);
     if (HAL_DMAEx_List_BuildNode(&node, &spi2_rx_node) != HAL_OK)
     {
       Error_Handler();
@@ -244,3 +248,4 @@ void HAL_I2S_MspDeInit(I2S_HandleTypeDef *hi2s)
     HAL_DMA_DeInit(&hdma_spi2_rx);
   }
 }
+#endif

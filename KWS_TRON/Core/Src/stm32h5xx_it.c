@@ -12,7 +12,11 @@
 
 extern ADC_HandleTypeDef hadc1;
 extern I2C_HandleTypeDef hi2c1;
+#include "app_config.h"
+
+#if KWS_SIGNAL_SOURCE == KWS_SOURCE_I2S
 extern DMA_HandleTypeDef hdma_spi2_rx;
+#endif
 
 void NMI_Handler(void)
 {
@@ -81,9 +85,11 @@ void I2C1_ER_IRQHandler(void)
   HAL_I2C_ER_IRQHandler(&hi2c1);
 }
 
+#if KWS_SIGNAL_SOURCE == KWS_SOURCE_I2S
 /* SPI2 RX audio stream. HAL_DMA_IRQHandler dispatches into the I2S half and
-   full complete callbacks implemented in app/t1_dma_ingest.c. */
+   full complete callbacks implemented in app/signal_source.c. */
 void GPDMA1_Channel0_IRQHandler(void)
 {
   HAL_DMA_IRQHandler(&hdma_spi2_rx);
 }
+#endif

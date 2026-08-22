@@ -41,3 +41,12 @@ uint32_t signal_source_overruns(void);
 /* Ground truth for the current replay clip, so an on device accuracy run can
    score itself. Returns -1 when the source cannot know the label. */
 int signal_source_current_label(void);
+
+/* Raw capture buffer, exposed so the interrupt setup in the MSP can target it
+   without the board layer knowing how the pipeline uses it. */
+const int16_t *signal_source_capture_buffer(void);
+
+#if KWS_SIGNAL_SOURCE == KWS_SOURCE_I2S
+const int32_t *signal_source_i2s_buffer(void);
+uint32_t signal_source_i2s_words(void);
+#endif

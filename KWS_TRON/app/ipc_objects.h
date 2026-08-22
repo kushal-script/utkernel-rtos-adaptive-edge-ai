@@ -6,25 +6,43 @@
 
 /* Every link between tasks is a native kernel primitive. Remove the kernel and
    the adaptive loop stops working, which is the point of the design. The full
-   map is in docs/architecture.md. */
+   map is in docs/architecture.md.
 
-/* flgid_capture, set from the DMA interrupt, waited on by T2. */
+   One event flag object per consumer edge, never shared. With TA_WMUL and a
+   TWF_BITCLR wait, the kernel stops releasing waiters as soon as one of them
+   clears the pattern, so two tasks waiting on the same object can lose a
+   wakeup. Splitting the objects removes the hazard entirely and costs nothing,
+   the kernel allows sixteen. */
+
+/* T1 capture interrupt to T2. */
 #define FLG_HALF_READY      (1u << 0)
 #define FLG_FULL_READY      (1u << 1)
 #define FLG_CAPTURE_ANY     (FLG_HALF_READY | FLG_FULL_READY)
-
-/* flgid_pipeline, the stage handoffs and the control signals T5 reacts to. */
-#define FLG_VOICE_ACTIVE    (1u << 0)   /* T2 to T3, block held speech      */
-#define FLG_QUIESCENT       (1u << 1)   /* T2 to T5, block was silence      */
-#define FLG_SKIP_FEATURES   (1u << 2)   /* T5 to T3, gate peeked with ref   */
-#define FLG_FEATURES_READY  (1u << 3)   /* T3 to T4, grid ready to classify */
-#define FLG_INFERENCE_DONE  (1u << 4)   /* T4 to T5, result available       */
-#define FLG_BUDGET_EXCEEDED (1u << 5)   /* T4 to T5, a layer overran        */
-
 extern ID flgid_capture;
-extern ID flgid_pipeline;
 
-/* T5 to T1, window resize. A mailbox message must begin with T_MSG. */
+/* T2 to T3, a block held speech and is worth turning into features. */
+#define FLG_VOICE_ACTIVE    (1u << 0)
+extern ID flgid_features;
+
+/* T3 to T4, the feature grid is ready to classify. */
+#define FLG_FEATURES_READY  (1u << 0)
+extern ID flgid_inference;
+
+/* T2 and T4 to T5, everything the controller reacts to. */
+#define FLG_QUIESCENT       (1u << 0)
+#define FLG_INFERENCE_DONE  (1u << 1)
+#define FLG_BUDGET_EXCEEDED (1u << 2)
+#define FLG_CONTROL_ANY     (FLG_QUIESCENT | FLG_INFERENCE_DONE | FLG_BUDGET_EXCEEDED)
+extern ID flgid_control;
+
+/* T5 to T3, the feature gate. Only ever peeked with tk_ref_flg, never waited
+   on, so the feature stage is never blocked by the controller. */
+#define FLG_SKIP_FEATURES   (1u << 0)
+extern ID flgid_gate;
+
+/* T5 to T1, window resize. A mailbox message must begin with T_MSG, which the
+   kernel uses as its queue link, and must live in storage that outlives the
+   send. */
 typedef struct {
     T_MSG    header;
     uint16_t window_samples;

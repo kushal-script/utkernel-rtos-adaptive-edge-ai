@@ -5,7 +5,10 @@
 #include "app_config.h"
 
 ID flgid_capture;
-ID flgid_pipeline;
+ID flgid_features;
+ID flgid_inference;
+ID flgid_control;
+ID flgid_gate;
 ID mbxid_window;
 ID mplid_layer;
 
@@ -17,29 +20,37 @@ adapt_state_t adapt_state = {
     .vad_threshold   = 0,
 };
 
-/* Backing store for the layer streaming pool. Sized for the largest layer's
-   weights in either precision plus the pool's own block headers. */
+/* Backing store for the layer streaming pool, supplied by the application so
+   the kernel heap is not involved. */
 static uint8_t layer_pool_buffer[KWS_LAYER_POOL_BYTES] __attribute__((aligned(8)));
 
-ER ipc_objects_init(void)
+static ER create_flag(ID *slot, const char *name)
 {
+    /* TA_WMUL so a flag can have more than one waiter, which the pipeline
+       needs even though each object serves a single consumer today. */
     T_CFLG cflg = {
         .exinf   = NULL,
         .flgatr  = TA_TFIFO | TA_WMUL,
         .iflgptn = 0,
     };
-
-    flgid_capture = tk_cre_flg(&cflg);
-    if (flgid_capture < E_OK) {
-        tm_printf((UB *)"ipc: cre_flg capture failed %d\n", (int)flgid_capture);
-        return (ER)flgid_capture;
+    ID id = tk_cre_flg(&cflg);
+    if (id < E_OK) {
+        tm_printf((UB *)"ipc: flag %s failed %d\n", name, (int)id);
+        return (ER)id;
     }
+    *slot = id;
+    return E_OK;
+}
 
-    flgid_pipeline = tk_cre_flg(&cflg);
-    if (flgid_pipeline < E_OK) {
-        tm_printf((UB *)"ipc: cre_flg pipeline failed %d\n", (int)flgid_pipeline);
-        return (ER)flgid_pipeline;
-    }
+ER ipc_objects_init(void)
+{
+    ER err;
+
+    if ((err = create_flag(&flgid_capture,   "capture"))   != E_OK) return err;
+    if ((err = create_flag(&flgid_features,  "features"))  != E_OK) return err;
+    if ((err = create_flag(&flgid_inference, "inference")) != E_OK) return err;
+    if ((err = create_flag(&flgid_control,   "control"))   != E_OK) return err;
+    if ((err = create_flag(&flgid_gate,      "gate"))      != E_OK) return err;
 
     T_CMBX cmbx = {
         .exinf  = NULL,
@@ -47,7 +58,7 @@ ER ipc_objects_init(void)
     };
     mbxid_window = tk_cre_mbx(&cmbx);
     if (mbxid_window < E_OK) {
-        tm_printf((UB *)"ipc: cre_mbx window failed %d\n", (int)mbxid_window);
+        tm_printf((UB *)"ipc: mailbox failed %d\n", (int)mbxid_window);
         return (ER)mbxid_window;
     }
 
@@ -59,7 +70,7 @@ ER ipc_objects_init(void)
     };
     mplid_layer = tk_cre_mpl(&cmpl);
     if (mplid_layer < E_OK) {
-        tm_printf((UB *)"ipc: cre_mpl layer failed %d\n", (int)mplid_layer);
+        tm_printf((UB *)"ipc: memory pool failed %d\n", (int)mplid_layer);
         return (ER)mplid_layer;
     }
 

@@ -2,70 +2,92 @@
 #include <tm/tmonitor.h>
 
 #include "app_config.h"
+#include "app_tasks.h"
 #include "ipc_objects.h"
-#include "t1_dma_ingest.h"
-#include "audio_probe.h"
+#include "kws_fft.h"
+#include "signal_source.h"
+#include "t1_ingest.h"
+#include "t2_variance.h"
+#include "t3_features.h"
+#include "t4_inference.h"
+#include "t5_controller.h"
 
-/* LD2 (PA5) toggles every 500 ms as a system alive indicator. */
+#if BENCH_ENABLE
+#include "bench_harness.h"
+#endif
+
+ID tskid_t1;
+ID tskid_t2;
+ID tskid_t3;
+ID tskid_t4;
+ID tskid_t5;
+ID tskid_heartbeat;
+ID tskid_bench;
+
+/* LD2 on PA5, a system alive indicator. */
 LOCAL void task_heartbeat(INT stacd, void *exinf)
 {
-    (void)stacd; (void)exinf;
-    UW tick = 0;
+    (void)stacd;
+    (void)exinf;
     while (1) {
         out_w(GPIO_ODR(A), in_w(GPIO_ODR(A)) ^ (1 << 5));
-#if !KWS_AUDIO_PROBE
-        tm_printf((UB*)"hb %u\n", (unsigned)tick++);
-#endif
-        (void)tick;
         tk_dly_tsk(500);
     }
 }
 
-LOCAL ID tskid_hb;
-LOCAL ID tskid_t1;
+typedef struct {
+    ID       *slot;
+    FP        entry;
+    PRI       priority;
+    SZ        stack;
+    const char *name;
+} task_spec_t;
 
-LOCAL T_CTSK ctsk_hb = {
-    .itskpri = 10,
-    .stksz   = 1024,
-    .task    = task_heartbeat,
-    .tskatr  = TA_HLNG | TA_RNG3,
-};
-
-LOCAL T_CTSK ctsk_t1 = {
-    .itskpri = 5,
-    .stksz   = 2048,
-    .task    = t1_dma_ingest_task,
-    .tskatr  = TA_HLNG | TA_RNG3,
-};
-
-#if KWS_AUDIO_PROBE
-LOCAL ID tskid_probe;
-LOCAL T_CTSK ctsk_probe = {
-    .itskpri = 8,
-    .stksz   = 2048,
-    .task    = audio_probe_task,
-    .tskatr  = TA_HLNG | TA_RNG3,
-};
+LOCAL const task_spec_t task_table[] = {
+    { &tskid_t1,        (FP)t1_ingest_task,      PRI_T1_INGEST,     STACK_MEDIUM, "T1 ingest"     },
+    { &tskid_t2,        (FP)t2_variance_task,    PRI_T2_VARIANCE,   STACK_MEDIUM, "T2 variance"   },
+    { &tskid_t3,        (FP)t3_features_task,    PRI_T3_FEATURES,   STACK_LARGE,  "T3 features"   },
+    { &tskid_t4,        (FP)t4_inference_task,   PRI_T4_INFERENCE,  STACK_LARGE,  "T4 inference"  },
+    { &tskid_t5,        (FP)t5_controller_task,  PRI_T5_CONTROLLER, STACK_MEDIUM, "T5 controller" },
+    { &tskid_heartbeat, (FP)task_heartbeat,      PRI_HEARTBEAT,     STACK_SMALL,  "heartbeat"     },
+#if BENCH_ENABLE
+    { &tskid_bench,     (FP)bench_task,          PRI_BENCH,         STACK_LARGE,  "benchmark"     },
 #endif
+};
+
+#define TASK_COUNT (sizeof(task_table) / sizeof(task_table[0]))
 
 EXPORT INT usermain(void)
 {
-    tm_putstring((UB*)"Start User-main program.\n");
+    tm_putstring((UB *)"RTOS coupled adaptive keyword spotting\n");
 
     out_w(GPIO_ODR(A), in_w(GPIO_ODR(A)) & ~(1 << 5));
 
-    ipc_objects_init();
+    kws_fft_init();
 
-    tskid_hb = tk_cre_tsk(&ctsk_hb);
-    tk_sta_tsk(tskid_hb, 0);
+    if (ipc_objects_init() != E_OK) {
+        tm_putstring((UB *)"usermain: kernel objects failed, halting\n");
+        tk_slp_tsk(TMO_FEVR);
+        return -1;
+    }
 
-    tskid_t1 = tk_cre_tsk(&ctsk_t1);
-    tk_sta_tsk(tskid_t1, 0);
-
-#if KWS_AUDIO_PROBE
-    tskid_probe = tk_cre_tsk(&ctsk_probe);
-    tk_sta_tsk(tskid_probe, 0);
-#endif
+    for (unsigned i = 0; i < TASK_COUNT; i++) {
+        T_CTSK ctsk = {
+            .exinf   = NULL,
+            .tskatr  = TA_HLNG | TA_RNG3,
+            .task    = task_table[i].entry,
+            .itskpri = task_table[i].priority,
+            .stksz   = task_table[i].stack,
+        };
+        ID id = tk_cre_tsk(&ctsk);
+        if (id < E_OK) {
+            tm_printf((UB *)"usermain: create %s failed %d\n",
+                      task_table[i].name, (int)id);
+            continue;
+        }
+        *task_table[i].slot = id;
+        tk_sta_tsk(id, 0);
+    }
 
     tk_slp_tsk(TMO_FEVR);
     return 0;

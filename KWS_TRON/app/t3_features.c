@@ -110,7 +110,7 @@ void t3_features_task(INT stacd, void *exinf)
 
     for (;;) {
         UINT pattern = 0;
-        ER err = tk_wai_flg(flgid_pipeline, FLG_VOICE_ACTIVE,
+        ER err = tk_wai_flg(flgid_features, FLG_VOICE_ACTIVE,
                             TWF_ORW | TWF_BITCLR, &pattern, TMO_FEVR);
         if (err < E_OK) {
             continue;
@@ -119,7 +119,7 @@ void t3_features_task(INT stacd, void *exinf)
         /* Non blocking peek at the gate, the controller can suppress the
            feature stage without ever blocking this task. */
         T_RFLG gate;
-        if (tk_ref_flg(flgid_pipeline, &gate) == E_OK &&
+        if (tk_ref_flg(flgid_gate, &gate) == E_OK &&
             (gate.flgptn & FLG_SKIP_FEATURES) != 0) {
             t3_stats.frames_skipped++;
             continue;
@@ -146,7 +146,7 @@ void t3_features_task(INT stacd, void *exinf)
                 since_inference = 0;
                 t3_apply_active_frames(adapt_state.active_frames);
                 t3_stats.inferences_queued++;
-                tk_set_flg(flgid_pipeline, FLG_FEATURES_READY);
+                tk_set_flg(flgid_inference, FLG_FEATURES_READY);
             }
         }
 

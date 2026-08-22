@@ -10,7 +10,7 @@ set(LINKER_SCRIPT ${CMAKE_SOURCE_DIR}/STM32H533RETX_FLASH.ld)
 # ── Source files ─────────────────────────────────────────────────────────────
 file(GLOB_RECURSE APP_SOURCES
     "app/*.c"
-    "app/*.cpp"
+    "audio/*.c"
     "benchmark/*.c"
 )
 
@@ -70,15 +70,11 @@ set(MTK3_SOURCES
     ${MTK3_BSP_DIR}/device/hal_adc/sysdepend/hal_adc_stm32h5.c
 )
 
-# TFLite Micro — uncomment after running project_generation script (Phase 3)
-# file(GLOB_RECURSE TFLM_SOURCES "tflm/*.c" "tflm/*.cc" "tflm/*.cpp")
-
 add_executable(${PROJECT_NAME}
     ${APP_SOURCES}
     ${CORE_SOURCES}
     ${HAL_SOURCES}
     ${MTK3_SOURCES}
-    # ${TFLM_SOURCES}
 )
 set_target_properties(${PROJECT_NAME} PROPERTIES SUFFIX ".elf")
 
@@ -109,30 +105,20 @@ target_include_directories(${PROJECT_NAME} PRIVATE
     mtk3/mtk3_bsp2/sysdepend/stm32_cube/cpu/core/armv8m
     mtk3/mtk3_bsp2/sysdepend/stm32_cube/lib/libtk/cpu/stm32h5
     mtk3/mtk3_bsp2/sysdepend/stm32_cube/lib/libtm/nucleo_stm32h533
-    # CMSIS-DSP (populated when STM32H5 firmware package is installed)
-    # cmsis_dsp/Include
-    # TFLite Micro (uncomment for Phase 3)
-    # tflm
-    # tflm/tensorflow/lite/micro
 )
 
 # ── Compile definitions ───────────────────────────────────────────────────────
 target_compile_definitions(${PROJECT_NAME} PRIVATE
     STM32H533xx
     USE_HAL_DRIVER
-    TF_LITE_STATIC_MEMORY
-    TF_LITE_DISABLE_X86_NEON
     # µT-Kernel 3.0 BSP2: selects H533 machine.h → defines MTKBSP_STM32CUBE,
     # MTKBSP_CPU_CORE_ARMV8M, MTKBSP_CPU_STM32H533, etc.
     _STM32CUBE_NUCLEO_H533_
 )
 
-# ── CMSIS-DSP static library ──────────────────────────────────────────────────
-# Populate after running: Help → STM32Cube Updater → STM32H5 in VS Code
-# then set path to the .a file from the firmware package.
-# target_link_libraries(${PROJECT_NAME}
-#     ${CMAKE_SOURCE_DIR}/cmsis_dsp/Lib/GCC/libarm_cortexM33_math.a
-# )
+# The transform and the inference kernels are in audio/, so no external DSP or
+# NN library is linked. Rationale is in docs/inference_core.md.
+target_link_libraries(${PROJECT_NAME} m)
 
 # ── Linker flags ──────────────────────────────────────────────────────────────
 target_link_options(${PROJECT_NAME} PRIVATE
