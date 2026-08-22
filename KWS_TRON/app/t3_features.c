@@ -10,6 +10,7 @@
 #include "kws_fft.h"
 #include "kws_model.h"
 #include "mfcc_tables.h"
+#include "signal_source.h"
 #include "t2_variance.h"
 
 t3_stats_t t3_stats;
@@ -130,6 +131,15 @@ void t3_features_task(INT stacd, void *exinf)
             uint32_t behind = sample_ring_count(&t2_ring) - consumed;
             if (!sample_ring_peek(&t2_ring, behind - FRAME_SIZE_SAMPLES,
                                   raw_frame, FRAME_SIZE_SAMPLES)) {
+                /* The producer has lapped the history this frame needed. Skip
+                   to the newest complete window rather than retrying the same
+                   unreachable one forever, and count the loss so the benchmark
+                   reports it instead of hiding a silent stall. */
+                uint32_t available = sample_ring_count(&t2_ring);
+                consumed = available > FRAME_SIZE_SAMPLES
+                               ? available - FRAME_SIZE_SAMPLES
+                               : 0;
+                t3_stats.resyncs++;
                 break;
             }
 
@@ -145,6 +155,9 @@ void t3_features_task(INT stacd, void *exinf)
             if (since_inference >= T4_INFERENCE_STRIDE && rows_filled >= KWS_FRAMES) {
                 since_inference = 0;
                 t3_apply_active_frames(adapt_state.active_frames);
+                /* Where in the corpus this grid came from, so the classification
+                   is scored against the audio it actually saw. */
+                t3_stats.grid_corpus_end = signal_source_completed_corpus();
                 t3_stats.inferences_queued++;
                 tk_set_flg(flgid_inference, FLG_FEATURES_READY);
             }

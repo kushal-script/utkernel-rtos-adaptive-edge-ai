@@ -108,7 +108,10 @@ void t4_inference_task(INT stacd, void *exinf)
             t4_stats.worst_cycles = t4_stats.last.total_cycles;
         }
 
-        int label = signal_source_current_label();
+        /* Score against the clip the grid holds, not the clip the DMA is
+           staging now, which is up to a second ahead of it. */
+        int label = signal_source_label_for_span(t3_stats.grid_corpus_end,
+                                                 KWS_GRID_SPAN_SAMPLES);
         t4_stats.last_label = label;
         if (label >= 0) {
             t4_stats.scored++;

@@ -147,21 +147,25 @@ void kws_infer(const int8_t *feature_grid, uint32_t precision_mask,
 
         result->layer_cycles[index] = elapsed;
         result->layer_precision[index] = (uint8_t)want;
-        spent += elapsed;
 
-        /* A layer's share of what is left, so an early overrun leaves the
-           later layers a tighter budget rather than silently eating slack. */
+        /* The share is computed from the budget left BEFORE this layer ran,
+           divided across this layer and the ones still to come. Subtracting the
+           layer's own cost first would compare it against a budget it had
+           already spent, so a layer that exactly met its share would be
+           reported as overrunning. A share of zero means nothing was left,
+           which is an overrun rather than a reason to stop checking. */
         if (deadline_cycles > 0) {
             uint32_t remaining_layers = KWS_NUM_LAYERS - index;
             uint32_t remaining_budget =
                 deadline_cycles > spent ? deadline_cycles - spent : 0;
-            uint32_t fair_share = remaining_budget / (remaining_layers ? remaining_layers : 1);
+            uint32_t fair_share = remaining_budget / remaining_layers;
             result->layer_budget[index] = fair_share;
-            if (!result->overran && elapsed > fair_share && fair_share > 0) {
+            if (!result->overran && elapsed > fair_share) {
                 result->overran = 1;
                 result->overran_layer = (uint8_t)index;
             }
         }
+        spent += elapsed;
         (void)tensor_elems;
     }
 

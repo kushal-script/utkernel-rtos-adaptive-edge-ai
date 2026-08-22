@@ -38,9 +38,18 @@ void signal_source_completed_block(UINT pattern, const int16_t **block,
 uint32_t signal_source_block_count(void);
 uint32_t signal_source_overruns(void);
 
-/* Ground truth for the current replay clip, so an on device accuracy run can
-   score itself. Returns -1 when the source cannot know the label. */
-int signal_source_current_label(void);
+/* Marks the block handed out by signal_source_completed_block as consumed. The
+   overrun counter depends on this being called after the copy, not before. */
+void signal_source_release_block(void);
+
+/* Corpus index of the block that filled most recently, so a consumer can say
+   which part of the corpus a derived result came from. */
+uint32_t signal_source_completed_corpus(void);
+
+/* Ground truth for a span of the corpus ending at end_offset. Returns -1 when
+   the span crosses a clip boundary or the corpus wrap, because such a span has
+   no single correct label and guessing would corrupt the reported accuracy. */
+int signal_source_label_for_span(uint32_t end_offset, uint32_t span);
 
 /* Raw capture buffer, exposed so the interrupt setup in the MSP can target it
    without the board layer knowing how the pipeline uses it. */

@@ -49,8 +49,14 @@
 /* Starting threshold only. T5 tracks the observed noise floor and places the
    gate a margin above it, so these are seeds rather than fixed constants. */
 #define T2_VAD_MARGIN_DB     9.0f
-#define T2_NOISE_ALPHA       0.02f    /* noise floor leak per quiet block */
 #define T2_HANGOVER_BLOCKS   6        /* keep the pipeline awake after speech */
+
+/* Blocks spent seeding the noise floor before the gate is trusted. Without a
+   seeding phase the gate and the floor deadlock: the floor is only updated on
+   blocks the gate calls quiet, and the gate calls nothing quiet until it has a
+   threshold, which needs a floor. During seeding the floor tracks the minimum
+   observed energy, which finds the true floor even if speech is present. */
+#define T2_FLOOR_SEED_BLOCKS 64
 
 /* ── Timing budget ────────────────────────────────────────────────────────── */
 /* Deadline for one classification. At a 160 ms cadence this leaves generous
@@ -71,14 +77,19 @@
 #define KWS_LAYER_POOL_BYTES 20480
 
 /* ── Task priorities, lower value is more urgent in uT-Kernel ─────────────── */
-#define PRI_T1_INGEST        5
-#define PRI_T2_VARIANCE      6
-#define PRI_T3_FEATURES      7
+/* The capture chain outranks inference at every priority inference can hold,
+   including the urgent tier. Raising inference above capture would let a late
+   inference starve the task that drains the DMA buffer, so a deadline recovery
+   would drop audio, which is a worse failure than the deadline it was trying
+   to save. */
+#define PRI_T5_CONTROLLER    2
+#define PRI_T1_INGEST        3
+#define PRI_T2_VARIANCE      4
+#define PRI_T3_FEATURES      5
+#define PRI_T4_URGENT        6      /* raised by T5 when a deadline is at risk */
 #define PRI_T4_INFERENCE     8
-#define PRI_T4_URGENT        4      /* raised by T5 when a deadline is at risk */
-#define PRI_T5_CONTROLLER    3
-#define PRI_HEARTBEAT        12
 #define PRI_BENCH            11
+#define PRI_HEARTBEAT        12
 
 #define STACK_SMALL          1024
 #define STACK_MEDIUM         2048

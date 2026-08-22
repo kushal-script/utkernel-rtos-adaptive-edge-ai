@@ -21,7 +21,14 @@ typedef struct {
     uint32_t grid_writes;      /* rows written         */
     uint32_t inferences_queued;
     uint32_t last_frame_cycles;
+    uint32_t resyncs;          /* times the producer lapped the frame history */
+    uint32_t grid_corpus_end;  /* corpus index the newest grid row ends at    */
 } t3_stats_t;
+
+/* Samples of audio the grid spans, the newest row's end back to the oldest
+   row's start. Used to score a classification against the right clip. */
+#define KWS_GRID_SPAN_SAMPLES \
+    ((KWS_FRAMES - 1) * FRAME_STRIDE_SAMPLES + FRAME_SIZE_SAMPLES)
 
 extern t3_stats_t t3_stats;
 

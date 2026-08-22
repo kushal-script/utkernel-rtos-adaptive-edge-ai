@@ -1,0 +1,43 @@
+{
+  "args": {
+    "root": "model/datasets/speech_commands_v0.02",
+    "epochs": 80,
+    "batch": 256,
+    "lr": 0.004,
+    "channels": 64,
+    "blocks": 4,
+    "seed": 0,
+    "min_active_frames": 16,
+    "slug": "dscnn-kws-long"
+  },
+  "feature_config": {
+    "sample_rate": 16000,
+    "clip_samples": 16000,
+    "frame_samples": 480,
+    "frame_stride": 320,
+    "n_fft": 512,
+    "n_mel": 40,
+    "n_mfcc": 10,
+    "mel_low_hz": 20.0,
+    "mel_high_hz": 4000.0,
+    "log_floor": 1e-06,
+    "n_frames": 49,
+    "n_bins": 257
+  },
+  "labels": [
+    "yes",
+    "no",
+    "up",
+    "down",
+    "left",
+    "right",
+    "on",
+    "off",
+    "stop",
+    "go",
+    "_silence_",
+    "_unknown_"
+  ],
+  "parameters": 23180,
+  "device": "mps"
+}

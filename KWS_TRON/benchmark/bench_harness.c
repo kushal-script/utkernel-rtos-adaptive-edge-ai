@@ -5,6 +5,7 @@
 #include <tm/tmonitor.h>
 
 #include "app_config.h"
+#include "app_tasks.h"
 #include "eval_set.h"
 #include "ipc_objects.h"
 #include "kws_infer.h"
@@ -69,6 +70,17 @@ void bench_task(INT stacd, void *exinf)
     /* Let the pipeline settle so the benchmark is not competing with startup. */
     tk_dly_tsk(2000);
 
+    /* The inference core keeps its activation arenas in static storage, so it
+       is single instance. Suspending the pipeline for the duration is both what
+       makes this safe and what makes the measurement clean: nothing else is
+       competing for the core or the cycle counter while a run is timed. */
+    const ID suspended[] = { tskid_t1, tskid_t2, tskid_t3, tskid_t4 };
+    for (unsigned i = 0; i < sizeof(suspended) / sizeof(suspended[0]); i++) {
+        if (suspended[i] > 0) {
+            tk_sus_tsk(suspended[i]);
+        }
+    }
+
     static bench_run_t run;
     const uint32_t all_int8 = 0u;
     const uint32_t all_fp32 = (KWS_NUM_LAYERS >= 32)
@@ -98,6 +110,12 @@ void bench_task(INT stacd, void *exinf)
     tm_printf((UB *)"BENCH_MEMORY peak_pool_bytes=%u pool_capacity=%u\n",
               (unsigned)t4_stats.peak_pool_bytes, (unsigned)KWS_LAYER_POOL_BYTES);
     tm_putstring((UB *)"BENCH_END\n");
+
+    for (unsigned i = 0; i < sizeof(suspended) / sizeof(suspended[0]); i++) {
+        if (suspended[i] > 0) {
+            tk_rsm_tsk(suspended[i]);
+        }
+    }
 
     tk_slp_tsk(TMO_FEVR);
 }

@@ -58,6 +58,24 @@ static bool demote_one(uint32_t *mask)
     return false;
 }
 
+/* The gate lever from the program plan. T3 peeks this flag without blocking,
+   so the controller can suppress the feature stage entirely on silence. */
+static void set_feature_gate(bool skip)
+{
+    if (skip) {
+        tk_set_flg(flgid_gate, FLG_SKIP_FEATURES);
+    } else {
+        tk_clr_flg(flgid_gate, ~FLG_SKIP_FEATURES);
+    }
+}
+
+static void set_inference_priority(PRI priority)
+{
+    if (tskid_t4 > 0) {
+        tk_chg_pri(tskid_t4, priority);
+    }
+}
+
 static bool promote_one(uint32_t *mask)
 {
     for (uint32_t i = 0; i < KWS_NUM_LAYERS; i++) {
@@ -108,6 +126,7 @@ void t5_controller_task(INT stacd, void *exinf)
             /* Nothing is happening. Widen the capture block so the pipeline is
                woken less often, and shorten the context the model is given. */
             if (quiet_run > 2) {
+                set_feature_gate(true);
                 uint32_t wider = clamp_window(window + T1_WINDOW_STEP);
                 uint32_t shorter = active > T3_ACTIVE_FRAMES_MIN + 4
                                        ? active - 4
@@ -122,7 +141,12 @@ void t5_controller_task(INT stacd, void *exinf)
         }
 
         quiet_run = 0;
+        set_feature_gate(false);
 
+        /* T4 raises the overrun flag and the done flag for the same inference.
+           Treating them as two events would demote a layer and then promote it
+           straight back, so an overrun is handled once and the done flag is
+           ignored when it arrives alongside one. */
         if (pattern & (FLG_INFERENCE_DONE | FLG_BUDGET_EXCEEDED)) {
             /* Learn the cost of an inference as an exponential mean, so the
                controller reacts to the machine it is actually running on. */
@@ -140,18 +164,19 @@ void t5_controller_task(INT stacd, void *exinf)
                     t5_stats.demotions++;
                 }
                 if (!t5_stats.urgent) {
-                    tk_chg_pri(tskid_t4, PRI_T4_URGENT);
+                    set_inference_priority(PRI_T4_URGENT);
                     t5_stats.urgent = 1;
                     t5_stats.priority_raises++;
                 }
-            } else if (t5_stats.cycles_ewma * 2u < deadline) {
+            } else if (((pattern & FLG_BUDGET_EXCEEDED) == 0) &&
+                       t5_stats.cycles_ewma * 2u < deadline) {
                 /* Comfortable slack, take some accuracy back. */
                 if (promote_one(&mask)) {
                     adapt_state.precision_mask = mask;
                     t5_stats.promotions++;
                 }
                 if (t5_stats.urgent) {
-                    tk_chg_pri(tskid_t4, PRI_T4_INFERENCE);
+                    set_inference_priority(PRI_T4_INFERENCE);
                     t5_stats.urgent = 0;
                 }
             }

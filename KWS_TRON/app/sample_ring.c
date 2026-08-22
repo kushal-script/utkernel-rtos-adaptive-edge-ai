@@ -28,15 +28,23 @@ void sample_ring_push(sample_ring_t *ring, const int16_t *src, uint32_t count)
 bool sample_ring_peek(const sample_ring_t *ring, uint32_t offset,
                       int16_t *dst, uint32_t count)
 {
+    /* The write cursor is sampled once and rechecked after the copy. The
+       producer runs at a higher priority than the consumer and can preempt this
+       copy, so a frame can be overwritten while it is being read. Detecting
+       that and reporting failure lets the caller resynchronise, which is far
+       better than handing back a frame stitched from two different moments. */
     uint32_t write = ring->write;
     if (offset + count > T3_SAMPLE_RING || offset + count > write) {
         return false;
     }
+
     uint32_t start = write - offset - count;
     for (uint32_t i = 0; i < count; i++) {
         dst[i] = ring->data[(start + i) & RING_MASK];
     }
-    return true;
+
+    /* Everything from `start` must still be inside the ring's live window. */
+    return (ring->write - start) <= T3_SAMPLE_RING;
 }
 
 void sample_ring_advance(sample_ring_t *ring, uint32_t count)

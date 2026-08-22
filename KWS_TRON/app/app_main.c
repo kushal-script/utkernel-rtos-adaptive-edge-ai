@@ -81,12 +81,21 @@ EXPORT INT usermain(void)
         };
         ID id = tk_cre_tsk(&ctsk);
         if (id < E_OK) {
-            tm_printf((UB *)"usermain: create %s failed %d\n",
+            /* Fatal rather than skipped. An uncreated identifier stays zero,
+               and zero means the calling task, so a later priority change would
+               silently retarget whoever made the call. */
+            tm_printf((UB *)"usermain: create %s failed %d, halting\n",
                       task_table[i].name, (int)id);
-            continue;
+            tk_slp_tsk(TMO_FEVR);
+            return -1;
         }
         *task_table[i].slot = id;
-        tk_sta_tsk(id, 0);
+        if (tk_sta_tsk(id, 0) < E_OK) {
+            tm_printf((UB *)"usermain: start %s failed, halting\n",
+                      task_table[i].name);
+            tk_slp_tsk(TMO_FEVR);
+            return -1;
+        }
     }
 
     tk_slp_tsk(TMO_FEVR);

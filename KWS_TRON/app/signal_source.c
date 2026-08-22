@@ -30,6 +30,13 @@ void signal_source_completed_block(UINT pattern, const int16_t **block,
     uint32_t half = completed_half;
     *block = &capture[half * window_samples];
     *count = window_samples;
+}
+
+void signal_source_release_block(void)
+{
+    /* Cleared only once the consumer has copied the block out. Clearing it at
+       hand out would hide the case where the next interrupt arrives before the
+       consumer is finished, which is exactly the overrun worth counting. */
     pending = 0;
 }
 
@@ -55,8 +62,10 @@ static DMA_HandleTypeDef hdma_replay;
 static DMA_NodeTypeDef   replay_node[2];
 static DMA_QListTypeDef  replay_queue;
 
-static volatile uint32_t replay_offset;    /* next sample index to stage */
-static volatile uint32_t node_turn;        /* node that completes next   */
+static volatile uint32_t replay_offset;      /* next corpus index to stage   */
+static volatile uint32_t node_offset[2];     /* corpus index staged per node */
+static volatile uint32_t completed_corpus;   /* corpus index of the last block */
+static volatile uint32_t node_turn;          /* node that completes next     */
 
 #define NODE_SOURCE_REGISTER 3u            /* CSAR, see hal_dma_ex.h     */
 
@@ -75,6 +84,7 @@ static void replay_block_complete(DMA_HandleTypeDef *hdma)
 
     uint32_t finished = node_turn;
     completed_half = finished;
+    completed_corpus = node_offset[finished];
     node_turn ^= 1u;
     block_count++;
 
@@ -86,13 +96,14 @@ static void replay_block_complete(DMA_HandleTypeDef *hdma)
     /* Stage the next chunk into the node that just finished, it will not run
        again until the other node has completed. */
     replay_offset = advance_offset(window_samples);
+    node_offset[finished] = replay_offset;
     replay_node[finished].LinkRegisters[NODE_SOURCE_REGISTER] =
         (uint32_t)&replay_samples[replay_offset];
 
     tk_set_flg(flgid_capture, finished == 0 ? FLG_HALF_READY : FLG_FULL_READY);
 }
 
-static ER build_queue(uint32_t samples)
+static ER build_queue(uint32_t samples, uint32_t base)
 {
     memset(&replay_queue, 0, sizeof(replay_queue));
 
@@ -103,7 +114,12 @@ static ER build_queue(uint32_t samples)
     node.DataSize = samples * sizeof(int16_t);
 
     for (uint32_t i = 0; i < 2; i++) {
-        node.SrcAddress = (uint32_t)&replay_samples[i * samples];
+        uint32_t offset = base + i * samples;
+        if (offset + samples > REPLAY_TOTAL_SAMPLES) {
+            offset = i * samples;
+        }
+        node_offset[i] = offset;
+        node.SrcAddress = (uint32_t)&replay_samples[offset];
         node.DstAddress = (uint32_t)&capture[i * samples];
         if (HAL_DMAEx_List_BuildNode(&node, &replay_node[i]) != HAL_OK) {
             return E_SYS;
@@ -115,7 +131,7 @@ static ER build_queue(uint32_t samples)
     if (HAL_DMAEx_List_SetCircularMode(&replay_queue) != HAL_OK) {
         return E_SYS;
     }
-    replay_offset = samples;
+    replay_offset = node_offset[1];
     node_turn = 0;
     return E_OK;
 }
@@ -176,12 +192,15 @@ ER signal_source_init(void)
     return E_OK;
 }
 
-ER signal_source_start(uint32_t samples)
+static ER start_at(uint32_t samples, uint32_t base)
 {
     window_samples = samples;
     memset(capture, 0, sizeof(capture));
+    pending = 0;
+    completed_half = 0;
+    completed_corpus = base;
 
-    ER err = build_queue(samples);
+    ER err = build_queue(samples, base);
     if (err != E_OK) {
         return err;
     }
@@ -195,6 +214,11 @@ ER signal_source_start(uint32_t samples)
     return E_OK;
 }
 
+ER signal_source_start(uint32_t samples)
+{
+    return start_at(samples, 0);
+}
+
 ER signal_source_set_window(uint32_t samples)
 {
     if (samples == window_samples) {
@@ -204,18 +228,35 @@ ER signal_source_set_window(uint32_t samples)
         return E_PAR;
     }
 
+    /* Resume where playback had reached. Restarting from the beginning would
+       make the corpus never advance once the controller resizes regularly, and
+       would silently invalidate every ground truth label. */
+    uint32_t resume = replay_offset;
     timer_stop();
     HAL_DMA_Abort(&hdma_replay);
-    return signal_source_start(samples);
+    return start_at(samples, resume);
 }
 
-int signal_source_current_label(void)
+uint32_t signal_source_completed_corpus(void)
 {
-    uint32_t clip = replay_offset / REPLAY_CLIP_SAMPLES;
-    if (clip >= REPLAY_CLIP_COUNT) {
+    return completed_corpus;
+}
+
+int signal_source_label_for_span(uint32_t end_offset, uint32_t span)
+{
+    /* Only score when the whole span sits inside one clip. A span that crosses
+       a clip boundary or the corpus wrap has no single correct answer, and
+       guessing one would quietly corrupt the reported accuracy. */
+    if (end_offset < span) {
         return -1;
     }
-    return (int)replay_clip_label[clip];
+    uint32_t start_offset = end_offset - span;
+    uint32_t first = start_offset / REPLAY_CLIP_SAMPLES;
+    uint32_t last  = (end_offset - 1u) / REPLAY_CLIP_SAMPLES;
+    if (first != last || last >= REPLAY_CLIP_COUNT) {
+        return -1;
+    }
+    return (int)replay_clip_label[last];
 }
 
 void GPDMA1_Channel1_IRQHandler(void)
@@ -258,7 +299,13 @@ ER signal_source_set_window(uint32_t samples)
     return signal_source_start(samples);
 }
 
-int signal_source_current_label(void) { return -1; }
+/* A live microphone carries no ground truth, so nothing can be scored from it. */
+uint32_t signal_source_completed_corpus(void) { return 0; }
+int signal_source_label_for_span(uint32_t end_offset, uint32_t span)
+{
+    (void)end_offset; (void)span;
+    return -1;
+}
 
 static void narrow(uint32_t half)
 {
