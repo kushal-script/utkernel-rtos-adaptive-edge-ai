@@ -46,7 +46,7 @@ void bench_run(const char *name, uint32_t precision_mask, uint32_t deadline,
 
 static void report(const bench_run_t *run)
 {
-    uint32_t mean = run->samples ? run->total_cycles / run->samples : 0;
+    uint32_t mean = run->samples ? (uint32_t)(run->total_cycles / run->samples) : 0;
     uint32_t accuracy_ppm =
         run->samples ? (uint32_t)((uint64_t)run->correct * 1000000u / run->samples) : 0;
 
@@ -56,7 +56,7 @@ static void report(const bench_run_t *run)
               (unsigned)run->best_cycles, (unsigned)(mean / T4_CYCLES_PER_US));
 
     for (uint32_t l = 0; l < KWS_NUM_LAYERS && l < 16; l++) {
-        uint32_t layer_mean = run->samples ? run->layer_cycles[l] / run->samples : 0;
+        uint32_t layer_mean = run->samples ? (uint32_t)(run->layer_cycles[l] / run->samples) : 0;
         tm_printf((UB *)"BENCH_LAYER %s %u %s %u\n", run->name, (unsigned)l,
                   kws_layers[l].name, (unsigned)layer_mean);
     }

@@ -18,10 +18,13 @@ typedef struct {
     uint32_t precision_mask;
     uint32_t samples;
     uint32_t correct;
-    uint32_t total_cycles;
+    /* Sums are 64 bit. A hundred and fifty inferences of tens of millions of
+       cycles overflow a 32 bit sum, which showed up on the first hardware run
+       as a reported mean below the reported minimum. */
+    uint64_t total_cycles;
     uint32_t worst_cycles;
     uint32_t best_cycles;
-    uint32_t layer_cycles[16];
+    uint64_t layer_cycles[16];
 } bench_run_t;
 
 void bench_task(INT stacd, void *exinf);
