@@ -84,8 +84,11 @@ weakening it. See [novelty.md](novelty.md).
 
 ## Current position
 
-Everything above that is marked done in software builds, fits, and is validated
-against a golden reference on the host. Nothing has run on the board yet, which
-is the single gap between the present state and a submittable result. The
-verification steps are listed per milestone above and collected in
-[benchmarking.md](benchmarking.md).
+The pipeline runs on the board. The capture chain produced blocks at the
+expected cadence, the gate learned its floor and threshold, the controller
+resized the window, raised priority, and converged the precision mask, and the
+benchmark measured the headline comparison with the DWT: FP32 125.1 ms misses
+the 115 ms deadline, INT8 102.6 ms, adaptive 112.0 ms mean and 112.1 ms worst
+case holding it, all at 94.0 percent accuracy, identical to the host. Runs are
+recorded under `experiments/` with the raw captures. What remains is the power
+axis through the SMPS, the M6 exit, and the optional M7 TrustZone stretch.

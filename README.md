@@ -11,22 +11,35 @@ TRON Programming Contest 2026, RTOS Application (Students). Board: NUCLEO-H533RE
 
 ## Status
 
-The complete five task pipeline is implemented and builds, using 113 KB of the
-272 KB SRAM and 396 KB of the 512 KB flash.
+The complete five task pipeline runs on the board, measured with the DWT cycle
+counter at 250 MHz. The headline result, one classification every cycle under a
+hard 115 ms deadline:
+
+| Configuration | Mean latency | Worst case | Deadline held | Accuracy |
+| :-- | --: | --: | :-- | --: |
+| FP32 static | 125.1 ms | 125.1 ms | no | 94.0 percent |
+| INT8 static | 102.6 ms | 102.7 ms | yes | 94.0 percent |
+| Adaptive | 112.0 ms | 112.1 ms | yes | 94.0 percent |
+
+Starting from full FP32 the controller reads the cycle counter, demotes layers
+one by one, and settles at a stable mixed precision point that holds the
+deadline while keeping the stem, the most information rich layer, at FP32. No
+thrash, nine demotions, zero promotions after convergence. On device accuracy
+matches the host prediction exactly in every configuration, so the core is bit
+faithful on silicon. The capture chain, the learned voice activity gate, window
+resizing, and the priority lever all operated on hardware in the same runs. The
+remaining unmeasured axis is power, which needs the SMPS measurement described
+in [docs/benchmarking.md](docs/benchmarking.md).
 
 | Piece | State |
 | :-- | :-- |
 | Boot, clock, kernel, cycle counter | Working on hardware |
-| Signal source, timer paced DMA replay | Builds, not yet run on hardware |
-| Feature extraction | Transform matches the host reference to 4e-6 |
-| Inference core | 94 percent on the evaluation set, matches the golden reference to 5e-8 |
-| Adaptation controller | Implemented, thresholds learned online |
-| Benchmark harness | Implemented, host side parser and plots working |
+| Signal source, timer paced DMA replay | Verified on hardware, blocks at the expected cadence |
+| Feature extraction | Matches the host front end to 6e-6, sparse mel projection |
+| Inference core | 94 percent on device, identical to host under every precision mix |
+| INT8 kernels | Packed SMLAD with folded offsets, 1.22 times faster than FP32 |
+| Adaptation controller | Converged on device, holds the deadline with a provable bound |
 | Trained model | 92.8 percent on twelve class Speech Commands, 23,180 parameters |
-
-Nothing has run on the board yet. Every milestone in
-[docs/roadmap.md](docs/roadmap.md) states what must be measured on hardware
-before it is called done.
 
 ## The signal source, and why there is no microphone in the loop
 

@@ -14,13 +14,21 @@
 
 int32_t kws_requantise(int32_t accumulator, int32_t multiplier, int32_t shift);
 
+/* The INT8 kernels take a folded accumulator table alongside the raw bias,
+   folded[oc] = bias[oc] + input_offset * sum(weights[oc]). For outputs whose
+   whole kernel window is inside the input the offset add then vanishes from
+   the inner loop, which is what lets the loop run as packed pairs. Outputs
+   touching the padding fall back to the original per element arithmetic, so
+   the result is bit identical to the unfolded form everywhere. Pass NULL to
+   use the original path throughout. */
 void kws_conv_int8(const kws_layer_t *layer, const int8_t *input,
-                   const int8_t *weights, const int32_t *bias, int8_t *output);
+                   const int8_t *weights, const int32_t *bias,
+                   const int32_t *folded, int8_t *output);
 void kws_depthwise_int8(const kws_layer_t *layer, const int8_t *input,
                         const int8_t *weights, const int32_t *bias, int8_t *output);
 void kws_fully_connected_int8(const kws_layer_t *layer, const int8_t *input,
                               const int8_t *weights, const int32_t *bias,
-                              int8_t *output);
+                              const int32_t *folded, int8_t *output);
 
 void kws_conv_fp32(const kws_layer_t *layer, const float *input,
                    const float *weights, const float *bias, float *output);

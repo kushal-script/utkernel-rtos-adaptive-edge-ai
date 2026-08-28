@@ -127,6 +127,18 @@ point unit, so an FP32 multiply accumulate is not four ALU operations.
 What actually makes INT8 faster is that weights are a quarter of the size and
 so cost a quarter of the memory traffic, that the DSP extension can pack
 multiply accumulates, and that integer work avoids moving values in and out of
-the floating point register file. The honest claim is the measured ratio on
-this silicon, which the benchmark reports for the same model and the same
-input, and which is currently unmeasured because the board has not run it yet.
+the floating point register file. The silicon confirmed this the hard way: the
+first hardware run used plain scalar kernels and INT8 came out 28 percent
+SLOWER than FP32, 160 against 125 ms, because the scalar path pays an offset
+add per element and a 64 bit requantisation while FP32 rides the FPU. Folding
+the input offset into precomputed per channel accumulators and running the
+contiguous layers as packed SXTB16 and SMLAD pairs, bit identical arithmetic
+checked against the golden reference, brought INT8 to 102.6 against FP32's
+125.1 ms, a measured 1.22 times advantage. The depthwise layers remain scalar,
+their samples are not contiguous, and they are the obvious next target.
+
+One more measured truth: a precision boundary conversion is real work, roughly
+a quarter of a million cycles when eight thousand activations cross a
+float to int8 boundary, which the pure configurations never pay. The deadline
+margin has to cover it, and the first closed loop attempt failed to converge to
+a mixed point for exactly that reason.

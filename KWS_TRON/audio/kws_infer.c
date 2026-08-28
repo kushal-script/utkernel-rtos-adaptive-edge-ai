@@ -10,6 +10,41 @@
 static float arena_a[KWS_MAX_TENSOR_ELEMS];
 static float arena_b[KWS_MAX_TENSOR_ELEMS];
 
+/* Folded accumulator tables, folded[oc] = bias[oc] + input_offset * sum(w).
+   Computed once from the layer table, they let the INT8 inner loops drop the
+   per element offset add, see kws_kernels.h. Depthwise keeps the plain path,
+   its window is small and its samples are not contiguous. */
+static int32_t folded_store[640];
+static const int32_t *layer_folded[KWS_NUM_LAYERS];
+static uint8_t folded_ready;
+
+static void fold_bias_tables(void)
+{
+    int32_t *slot = folded_store;
+    for (uint32_t i = 0; i < KWS_NUM_LAYERS; i++) {
+        const kws_layer_t *layer = &kws_layers[i];
+        if (layer->kind == KWS_LAYER_DEPTHWISE) {
+            layer_folded[i] = NULL;
+            continue;
+        }
+        uint32_t per_filter = layer->kind == KWS_LAYER_FULLY_CONNECTED
+                                  ? layer->in_c
+                                  : (uint32_t)layer->kernel_h * layer->kernel_w *
+                                        layer->in_c;
+        for (uint32_t oc = 0; oc < layer->out_c; oc++) {
+            const int8_t *w = &layer->weight_int8[oc * per_filter];
+            int32_t sum = 0;
+            for (uint32_t k = 0; k < per_filter; k++) {
+                sum += w[k];
+            }
+            slot[oc] = layer->bias_int32[oc] + layer->input_offset * sum;
+        }
+        layer_folded[i] = slot;
+        slot += layer->out_c;
+    }
+    folded_ready = 1;
+}
+
 __attribute__((weak)) uint32_t kws_cycle_counter(void)
 {
     return 0;
@@ -40,6 +75,10 @@ void kws_infer(const int8_t *feature_grid, uint32_t precision_mask,
                uint32_t deadline_cycles, kws_result_t *result)
 {
     memset(result, 0, sizeof(*result));
+
+    if (!folded_ready) {
+        fold_bias_tables();
+    }
 
     void *current = arena_a;
     void *spare   = arena_b;
@@ -113,11 +152,13 @@ void kws_infer(const int8_t *feature_grid, uint32_t precision_mask,
                 break;
             case KWS_LAYER_FULLY_CONNECTED:
                 kws_fully_connected_int8(layer, (const int8_t *)current, w,
-                                         layer->bias_int32, (int8_t *)spare);
+                                         layer->bias_int32, layer_folded[index],
+                                         (int8_t *)spare);
                 break;
             default:
                 kws_conv_int8(layer, (const int8_t *)current, w,
-                              layer->bias_int32, (int8_t *)spare);
+                              layer->bias_int32, layer_folded[index],
+                              (int8_t *)spare);
                 break;
             }
         } else {
@@ -148,24 +189,24 @@ void kws_infer(const int8_t *feature_grid, uint32_t precision_mask,
         result->layer_cycles[index] = elapsed;
         result->layer_precision[index] = (uint8_t)want;
 
-        /* The share is computed from the budget left BEFORE this layer ran,
-           divided across this layer and the ones still to come. Subtracting the
-           layer's own cost first would compare it against a budget it had
-           already spent, so a layer that exactly met its share would be
-           reported as overrunning. A share of zero means nothing was left,
-           which is an overrun rather than a reason to stop checking. */
+        /* The overrun signal is the cumulative spend crossing the deadline,
+           recorded at the layer where it happened. A uniform per layer share
+           cannot work here, the stem alone is over a fifth of the network, so
+           it would exceed a tenth of any deadline at either precision and the
+           controller would demote forever. The even split of the remaining
+           budget is still recorded per layer as telemetry. */
+        spent += elapsed;
         if (deadline_cycles > 0) {
-            uint32_t remaining_layers = KWS_NUM_LAYERS - index;
+            uint32_t remaining_layers = KWS_NUM_LAYERS - 1 - index;
             uint32_t remaining_budget =
                 deadline_cycles > spent ? deadline_cycles - spent : 0;
-            uint32_t fair_share = remaining_budget / remaining_layers;
-            result->layer_budget[index] = fair_share;
-            if (!result->overran && elapsed > fair_share) {
+            result->layer_budget[index] =
+                remaining_layers ? remaining_budget / remaining_layers : remaining_budget;
+            if (!result->overran && spent > deadline_cycles) {
                 result->overran = 1;
                 result->overran_layer = (uint8_t)index;
             }
         }
-        spent += elapsed;
         (void)tensor_elems;
     }
 

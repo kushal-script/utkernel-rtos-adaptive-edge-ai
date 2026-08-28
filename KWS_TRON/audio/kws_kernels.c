@@ -1,6 +1,48 @@
 #include "kws_kernels.h"
 
 #include <math.h>
+#include <stdbool.h>
+#include <string.h>
+
+/* Four int8 multiply accumulates on contiguous operands. On the Cortex-M33 the
+   DSP extension does this as two packed halfword multiplies after byte
+   unpacking. The C form computes the identical int32 sum, so the host build
+   checks the same arithmetic the board runs. */
+#if defined(__ARM_FEATURE_DSP) && defined(__arm__)
+static inline int32_t dot4(const int8_t *a, const int8_t *b, int32_t acc)
+{
+    uint32_t wa, wb, a02, a13, b02, b13;
+    memcpy(&wa, a, 4);
+    memcpy(&wb, b, 4);
+    __asm__ ("sxtb16 %0, %1"          : "=r"(a02) : "r"(wa));
+    __asm__ ("sxtb16 %0, %1, ror #8"  : "=r"(a13) : "r"(wa));
+    __asm__ ("sxtb16 %0, %1"          : "=r"(b02) : "r"(wb));
+    __asm__ ("sxtb16 %0, %1, ror #8"  : "=r"(b13) : "r"(wb));
+    __asm__ ("smlad %0, %1, %2, %3"   : "=r"(acc) : "r"(a02), "r"(b02), "r"(acc));
+    __asm__ ("smlad %0, %1, %2, %3"   : "=r"(acc) : "r"(a13), "r"(b13), "r"(acc));
+    return acc;
+}
+#else
+static inline int32_t dot4(const int8_t *a, const int8_t *b, int32_t acc)
+{
+    return acc + (int32_t)a[0] * b[0] + (int32_t)a[1] * b[1] +
+                 (int32_t)a[2] * b[2] + (int32_t)a[3] * b[3];
+}
+#endif
+
+/* Plain dot product over a contiguous run, folded form, no offset term. */
+static inline int32_t dot_run(const int8_t *a, const int8_t *b, int32_t length,
+                              int32_t acc)
+{
+    int32_t i = 0;
+    for (; i + 4 <= length; i += 4) {
+        acc = dot4(&a[i], &b[i], acc);
+    }
+    for (; i < length; i++) {
+        acc += (int32_t)a[i] * b[i];
+    }
+    return acc;
+}
 
 int32_t kws_requantise(int32_t accumulator, int32_t multiplier, int32_t shift)
 {
@@ -26,31 +68,50 @@ static inline int32_t clamp(int32_t value, int32_t low, int32_t high)
 }
 
 void kws_conv_int8(const kws_layer_t *layer, const int8_t *input,
-                   const int8_t *weights, const int32_t *bias, int8_t *output)
+                   const int8_t *weights, const int32_t *bias,
+                   const int32_t *folded, int8_t *output)
 {
     const int32_t in_h = layer->in_h, in_w = layer->in_w, in_c = layer->in_c;
     const int32_t out_h = layer->out_h, out_w = layer->out_w, out_c = layer->out_c;
     const int32_t kh_n = layer->kernel_h, kw_n = layer->kernel_w;
+    const int32_t row_len = kw_n * in_c;
 
     for (int32_t oh = 0; oh < out_h; oh++) {
+        const int32_t ih0 = oh * layer->stride_h - layer->pad_h;
+        const bool rows_inside = ih0 >= 0 && ih0 + kh_n <= in_h;
         for (int32_t ow = 0; ow < out_w; ow++) {
+            const int32_t iw0 = ow * layer->stride_w - layer->pad_w;
+            const bool inside = rows_inside && iw0 >= 0 && iw0 + kw_n <= in_w;
             for (int32_t oc = 0; oc < out_c; oc++) {
-                int32_t acc = bias[oc];
-                for (int32_t kh = 0; kh < kh_n; kh++) {
-                    int32_t ih = oh * layer->stride_h - layer->pad_h + kh;
-                    if (ih < 0 || ih >= in_h) {
-                        continue;
+                int32_t acc;
+                if (inside && folded != NULL) {
+                    /* Whole window in bounds: the offset term is already in
+                       folded[oc], and each kernel row reads a contiguous run
+                       of kw_n * in_c samples against contiguous weights. */
+                    acc = folded[oc];
+                    const int8_t *wt = &weights[oc * kh_n * row_len];
+                    for (int32_t kh = 0; kh < kh_n; kh++) {
+                        const int8_t *in_row = &input[((ih0 + kh) * in_w + iw0) * in_c];
+                        acc = dot_run(in_row, &wt[kh * row_len], row_len, acc);
                     }
-                    for (int32_t kw = 0; kw < kw_n; kw++) {
-                        int32_t iw = ow * layer->stride_w - layer->pad_w + kw;
-                        if (iw < 0 || iw >= in_w) {
+                } else {
+                    acc = bias[oc];
+                    for (int32_t kh = 0; kh < kh_n; kh++) {
+                        int32_t ih = ih0 + kh;
+                        if (ih < 0 || ih >= in_h) {
                             continue;
                         }
-                        const int8_t *in_px = &input[(ih * in_w + iw) * in_c];
-                        const int8_t *wt = &weights[((oc * kh_n + kh) * kw_n + kw) * in_c];
-                        for (int32_t ic = 0; ic < in_c; ic++) {
-                            acc += ((int32_t)in_px[ic] + layer->input_offset) *
-                                   (int32_t)wt[ic];
+                        for (int32_t kw = 0; kw < kw_n; kw++) {
+                            int32_t iw = iw0 + kw;
+                            if (iw < 0 || iw >= in_w) {
+                                continue;
+                            }
+                            const int8_t *in_px = &input[(ih * in_w + iw) * in_c];
+                            const int8_t *wt = &weights[((oc * kh_n + kh) * kw_n + kw) * in_c];
+                            for (int32_t ic = 0; ic < in_c; ic++) {
+                                acc += ((int32_t)in_px[ic] + layer->input_offset) *
+                                       (int32_t)wt[ic];
+                            }
                         }
                     }
                 }
@@ -104,15 +165,20 @@ void kws_depthwise_int8(const kws_layer_t *layer, const int8_t *input,
 
 void kws_fully_connected_int8(const kws_layer_t *layer, const int8_t *input,
                               const int8_t *weights, const int32_t *bias,
-                              int8_t *output)
+                              const int32_t *folded, int8_t *output)
 {
     const int32_t in_c = layer->in_c, out_c = layer->out_c;
 
     for (int32_t oc = 0; oc < out_c; oc++) {
-        int32_t acc = bias[oc];
+        int32_t acc;
         const int8_t *row = &weights[oc * in_c];
-        for (int32_t ic = 0; ic < in_c; ic++) {
-            acc += ((int32_t)input[ic] + layer->input_offset) * (int32_t)row[ic];
+        if (folded != NULL) {
+            acc = dot_run(input, row, in_c, folded[oc]);
+        } else {
+            acc = bias[oc];
+            for (int32_t ic = 0; ic < in_c; ic++) {
+                acc += ((int32_t)input[ic] + layer->input_offset) * (int32_t)row[ic];
+            }
         }
         int32_t value = kws_requantise(acc, layer->multiplier[oc], layer->shift[oc]);
         value += layer->output_offset;

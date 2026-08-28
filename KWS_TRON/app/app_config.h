@@ -59,11 +59,16 @@
 #define T2_FLOOR_SEED_BLOCKS 64
 
 /* ── Timing budget ────────────────────────────────────────────────────────── */
-/* Deadline for one classification. At a 160 ms cadence this leaves generous
-   headroom, the point is that the bound is enforced and provable. */
+/* Deadline for one classification, set between the measured cost of the two
+   pure configurations on this silicon, 102.6 ms for INT8 and 125.1 ms for
+   FP32. Full FP32 therefore overruns and the controller demotes layer by
+   layer until the deadline holds, which lands on a mixed precision point that
+   keeps the most FP32 the budget allows. The margin over the settled cost
+   covers the precision boundary conversions, which are real work the pure
+   configurations never pay. See docs/adaptation.md. */
 #define SYSTEM_CLOCK_HZ      250000000u
 #define T4_CYCLES_PER_US     (SYSTEM_CLOCK_HZ / 1000000u)
-#define T4_DEADLINE_US       40000u
+#define T4_DEADLINE_US       115000u
 #define T4_DEADLINE_CYCLES   ((uint32_t)T4_DEADLINE_US * T4_CYCLES_PER_US)
 
 /* Fraction of the remaining budget a layer may take before the controller
