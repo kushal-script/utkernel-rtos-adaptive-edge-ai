@@ -348,7 +348,10 @@ def main():
     parser.add_argument("--checkpoint", required=True)
     parser.add_argument("--out-dir", default="KWS_TRON/audio")
     parser.add_argument("--cache", default="model/datasets/cache")
-    parser.add_argument("--replay-clips", type=int, default=3)
+    parser.add_argument(
+        "--replay-clips", type=int, default=None,
+        help="truncate the replay corpus, default is every clip make_replay built",
+    )
     parser.add_argument("--eval-samples", type=int, default=150)
     parser.add_argument("--verify-samples", type=int, default=24)
     parser.add_argument("--calib-samples", type=int, default=512)
@@ -428,7 +431,15 @@ def main():
         raw = None
 
     if raw is not None:
-        take = min(args.replay_clips, len(raw))
+        # The stratified corpus is built as a whole: alternating keyword and
+        # silence is the property that makes the gate observable, and half a
+        # corpus is not half as useful, it is a different experiment. So it is
+        # used entire unless a count is passed. A default that disagreed with
+        # make_replay's is what previously let an export silently emit three
+        # clips from a six clip corpus and change what the firmware replays.
+        take = len(raw) if args.replay_clips is None else min(args.replay_clips, len(raw))
+        if take != len(raw):
+            print(f"WARNING replay corpus truncated to {take} of {len(raw)} clips")
         (out_dir / "replay_data.h").write_text(emit_replay_header(take, cfg))
         (out_dir / "replay_data.c").write_text(
             emit_replay_data(

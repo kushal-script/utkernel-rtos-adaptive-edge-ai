@@ -22,6 +22,32 @@ exactly as it would be with a sensor attached.
 Because the corpus carries labels, the device can also score itself, which is
 what makes the on device accuracy number in the benchmark meaningful.
 
+## The corpus, and reproducing it exactly
+
+Six clips alternating keyword and silence: down, silence, yes, silence, stop,
+silence. The alternation is the point. A run of keywords holds the voice
+activity gate permanently open, so the quiescent branch of the controller, which
+is where the power saving comes from, is never entered and cannot be observed.
+
+The corpus is built once and cached, then compiled into flash by the exporter:
+
+```
+python -m kws.make_replay          # model/datasets/cache/replay_clips.npz
+python -m kws.export --checkpoint <run>/checkpoint.pt
+```
+
+Both are deterministic. `make_replay` seeds its selection, so rebuilding from
+the dataset reproduces the cached clips bit for bit, and the exporter then
+reproduces `replay_data.c` byte for byte. Run them with their defaults and the
+committed sources come back unchanged; that is the check that the audio behind
+every recorded experiment is still the audio in the repository.
+
+Take the corpus whole. The exporter uses every clip in the cache unless
+`--replay-clips` is passed, and warns when that flag truncates, because half a
+stratified corpus is not half an experiment, it is a different one: dropping
+clips changes which words are replayed and how often the gate is crossed, and a
+run against it is no longer comparable with anything already recorded.
+
 ## How the replay source works
 
 TIM6 is programmed directly, without the timer HAL, to raise an update event at

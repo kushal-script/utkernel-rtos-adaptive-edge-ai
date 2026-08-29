@@ -94,6 +94,11 @@ python -m kws.export --checkpoint ../experiments/<run>/checkpoint.pt
 Export verifies the quantised graph against the float model before it emits
 anything, and refuses to be trusted if they disagree.
 
+Both steps are deterministic, so running them unchanged against the same
+checkpoint regenerates every file under `KWS_TRON/audio` byte for byte. If a
+regeneration you did not intend shows a diff, something upstream moved: check
+the corpus first, see [signal_source.md](signal_source.md).
+
 ## Appendix, flashing when ST-LINK SWD is unavailable
 
 On one development machine the ST-LINK's USB link could not sustain the bulk
