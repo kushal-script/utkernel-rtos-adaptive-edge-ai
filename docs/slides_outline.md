@@ -63,7 +63,7 @@ native kernel primitive.
 | :-- | --: | :-- | --: |
 | Static FP32 | 125.9 ms | missed | 23.5 percent |
 | Static INT8 | 101.5 ms | met | 39.9 percent |
-| **Adaptive** | **98.2 ms** | **met** | **40.1 percent** |
+| **Adaptive** | **98.2 ms** | **met** | **42.0 percent** |
 
 The adaptive point is **faster than either static build**, not a compromise
 between them. The deadline is the classification period itself, derived from the
@@ -126,8 +126,8 @@ jumper.
   reported, including the deadline misses during it, rather than only the
   settled average.
 * **Power.** The kernel idle hook was an empty function; it now sleeps. Core
-  measured asleep 40.1 percent of wall time adaptive against 23.5 percent FP32,
-  a factor of 1.71 on identical audio.
+  measured asleep 42.0 percent of wall time adaptive against 23.5 percent FP32,
+  a factor of 1.79 on identical audio, and above static INT8 at 39.9 percent.
 * **Footprint.** 460 KB flash, 117 KB of 272 KB SRAM, per layer weight streaming
   through `tk_get_mpl` with peak pool use of 16 KB measured.
 

@@ -167,7 +167,7 @@ function arrow(s, x, y, w, h) {
   const s = lightSlide("The adaptive point is faster than either static build", "MEASURED ON HARDWARE");
   const rows=[["Static FP32","125.9 ms","missed","23.5 %"],
               ["Static INT8","101.5 ms","met","39.9 %"],
-              ["Adaptive","98.2 ms","met","40.1 %"]];
+              ["Adaptive","98.2 ms","met","42.0 %"]];
   const x0=M, y0=1.95, tw=7.6, rh=0.98;
   const cols=[0.35, 3.05, 4.75, 6.35];
   [["CONFIGURATION",2.6],["LATENCY",1.6],["DEADLINE",1.6],["CORE IDLE",1.3]].forEach((h,i)=>{
@@ -284,8 +284,8 @@ function arrow(s, x, y, w, h) {
 // ============ 8. THREE CHARACTERISTICS ============
 {
   const s = lightSlide("The three characteristics the contest rewards", "RESULTS");
-  const cards=[["Real time","The deadline is derived from the application, not tuned to the answer. The convergence transient and its deadline misses are reported, not hidden behind a settled average.","120 ms","held in the steady state"],
-               ["Power","The kernel idle hook shipped empty, so the core spun at 250 MHz between blocks. It now sleeps under BASEPRI. Identical audio, identical windows.","1.71×","longer asleep than FP32"],
+  const cards=[["Real time","The deadline is derived from the application, not tuned to the answer. Under live pipeline load the converged mask ran every traced inference at 101 ms, while static FP32 was over on all 45 of its.","120 ms","held under live load"],
+               ["Power","The kernel idle hook shipped empty, so the core spun at 250 MHz between blocks. It now sleeps under BASEPRI. Identical audio, identical windows.","1.79×","longer asleep than FP32"],
                ["Footprint","Layer weights are streamed through tk_get_mpl so only the working layer occupies SRAM, with peak pool use measured rather than asserted.","117 KB","of 272 KB SRAM"]];
   const cw=3.78, gap=0.28, y=1.9, ch=4.42;
   cards.forEach((c,i)=>{
@@ -374,7 +374,7 @@ function arrow(s, x, y, w, h) {
   s.addText("The signal source is one interface with two implementations, and the pipeline above it does not know where samples come from. The task graph and the adaptation primitives carry over to any sensor domain: vibration, audio, temperature, biosignals.",
     { x:M, y:2.5, w:8.4, h:1.5, isTextBox:true, margin:0, valign:"top",
       fontFace:BODY, fontSize:16, color:ICE, lineSpacingMultiple:1.25 });
-  const stats=[["98.2 ms","adaptive latency"],["1.71×","longer asleep"],["0","dropped blocks"]];
+  const stats=[["98.2 ms","adaptive latency"],["1.79×","longer asleep"],["0","dropped blocks"]];
   stats.forEach((st,i)=>{
     const x=M+i*3.0;
     s.addText(st[0], { x, y:4.35, w:2.8, h:0.62, isTextBox:true, margin:0, valign:"top",

@@ -35,10 +35,8 @@ uint32_t bsp_idle_entries(void) { return idle_entries; }
  * Called from the dispatcher with BASEPRI already raised to mask external
  * interrupts. A bare WFI there would never wake, because the interrupts that
  * would end the idle period are exactly the ones BASEPRI is masking. The
- * sequence below is the standard way out: PRIMASK blocks the interrupt from
- * being taken while BASEPRI is dropped, so the pending interrupt still counts
- * as a wake up event, and the dispatcher's masking is restored before the
- * interrupt is allowed through.
+ * sequence below drops BASEPRI around the WFI and restores it afterwards. It
+ * deliberately does not hold PRIMASK, for the reason given at the asm block.
  */
 EXPORT void low_pow( void )
 {

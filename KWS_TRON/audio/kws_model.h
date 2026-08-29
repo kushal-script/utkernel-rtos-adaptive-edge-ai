@@ -16,6 +16,12 @@
 /* Largest activation tensor in elements, sizes the two ping pong arenas. */
 #define KWS_MAX_TENSOR_ELEMS 8000
 
+/* Folded accumulator slots the inference core needs, one per output channel of
+   every layer that folds its bias. Depthwise layers keep the plain path and
+   take none. Checked against the static store by _Static_assert in kws_infer.c,
+   so a wider model fails the build rather than overflowing at run time. */
+#define KWS_FOLDED_SLOTS_REQUIRED 332
+
 extern const kws_layer_t kws_layers[KWS_NUM_LAYERS];
 extern const char *const kws_labels[KWS_NUM_CLASSES];
 

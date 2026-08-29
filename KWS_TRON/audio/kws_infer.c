@@ -14,7 +14,10 @@ static float arena_b[KWS_MAX_TENSOR_ELEMS];
    Computed once from the layer table, they let the INT8 inner loops drop the
    per element offset add, see kws_kernels.h. Depthwise keeps the plain path,
    its window is small and its samples are not contiguous. */
-static int32_t folded_store[640];
+#define KWS_FOLDED_SLOTS 640
+static int32_t folded_store[KWS_FOLDED_SLOTS];
+_Static_assert(KWS_FOLDED_SLOTS >= KWS_FOLDED_SLOTS_REQUIRED,
+               "folded_store is too small for this model, raise KWS_FOLDED_SLOTS");
 static const int32_t *layer_folded[KWS_NUM_LAYERS];
 static uint8_t folded_ready;
 

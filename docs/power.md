@@ -52,10 +52,12 @@ same replayed audio for the same wall time, the comparison is like for like.
 | :-- | --: | --: |
 | Static FP32 | 23.5 percent | 1.00 |
 | Static INT8 | 39.9 percent | 1.70 |
-| Adaptive | 40.1 percent | 1.71 |
+| Adaptive | 42.0 percent | 1.79 |
 
 Thirty second windows, identical corpus, whole pipeline running. The adaptive
-configuration leaves the core asleep **1.71 times as long** as static FP32.
+configuration leaves the core asleep **1.79 times as long** as static FP32, and
+longer than static INT8 as well, which is the point: the mixed mask does less
+work per classification than either pure build.
 
 That ratio is the defensible power statement. Idle time is when the core is
 clock gated in sleep rather than executing at 250 MHz, so more of it means less

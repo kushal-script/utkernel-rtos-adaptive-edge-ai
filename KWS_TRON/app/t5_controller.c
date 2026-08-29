@@ -199,6 +199,15 @@ void t5_controller_task(INT stacd, void *exinf)
                                              (t5_stats.cycles_ewma / 8u) + (cost / 8u);
 
             uint32_t deadline = adapt_state.deadline_cycles;
+
+            /* T4 runs whatever adapt_state holds, and the benchmark writes that
+               field directly to pin a configuration. The controller therefore
+               re-reads it here rather than trusting the mask it last wrote:
+               without this the two diverge the moment anything else sets the
+               field, the controller ranks moves against a configuration that is
+               not executing, and every trace row labels a measured cost with a
+               mask that did not produce it. */
+            mask = adapt_state.precision_mask;
             uint32_t before = mask;
             uint8_t action = T5_ACTION_NONE;
             uint8_t over = ((pattern & FLG_BUDGET_EXCEEDED) || cost > deadline);
@@ -240,7 +249,10 @@ void t5_controller_task(INT stacd, void *exinf)
                opposite extreme: if the walk lands on the same mask from both
                ends, the operating point is a property of the silicon rather
                than of where the search began. */
-            if (action == T5_ACTION_NONE) {
+            /* The pinned case is excluded because a pinned controller can
+               never produce a move, so every decision would look settled and
+               the probe below would overwrite the very mask being held. */
+            if (action == T5_ACTION_NONE && !adapt_state.pin_precision) {
                 settled++;
                 if (settled >= T5_CONVERGE_DECISIONS && !t5_stats.converged) {
                     t5_stats.converged_at = t5_stats.decisions;

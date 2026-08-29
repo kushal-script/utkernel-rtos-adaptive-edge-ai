@@ -139,6 +139,12 @@ def emit_model_header(layers, labels, cfg: FeatureConfig, channels: int) -> str:
 /* Largest activation tensor in elements, sizes the two ping pong arenas. */
 #define KWS_MAX_TENSOR_ELEMS {_max_tensor(layers)}
 
+/* Folded accumulator slots the inference core needs, one per output channel of
+   every layer that folds its bias. Depthwise layers keep the plain path and
+   take none. Checked against the static store by _Static_assert in kws_infer.c,
+   so a wider model fails the build rather than overflowing at run time. */
+#define KWS_FOLDED_SLOTS_REQUIRED {_folded_slots(layers)}
+
 extern const kws_layer_t kws_layers[KWS_NUM_LAYERS];
 extern const char *const kws_labels[KWS_NUM_CLASSES];
 
@@ -150,6 +156,16 @@ extern const int32_t kws_input_zero_point;
 extern const float kws_feature_mean[KWS_INPUT_MFCC];
 extern const float kws_feature_std[KWS_INPUT_MFCC];
 """
+
+
+def _folded_slots(layers):
+    """Slots fold_bias_tables consumes: one per output channel, depthwise excepted.
+
+    Mirrors the loop in KWS_TRON/audio/kws_infer.c. The two must agree, which is
+    what the _Static_assert on the device side enforces.
+    """
+    return sum(int(layer.out_shape[2]) for layer in layers
+               if layer.kind != DEPTHWISE)
 
 
 def _max_tensor(layers):
