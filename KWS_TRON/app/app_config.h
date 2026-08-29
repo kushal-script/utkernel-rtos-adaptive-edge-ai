@@ -136,6 +136,13 @@
    reported operating point a settled one. */
 #define BENCH_SETTLE_MAX_MS  60000u
 
+/* Length of each live measurement window. The whole pipeline runs, so what is
+   measured is end to end accuracy from replayed audio through capture, the
+   gate, features and inference, together with the idle residency that goes
+   with that configuration. Three configurations at this length is the bulk of
+   a run, so it trades directly against how long a benchmark takes. */
+#define BENCH_LIVE_MS        30000u
+
 /* Put the core to sleep in the kernel idle hook. The idle residency counters
    are collected either way, so the measurement works with this off, but the
    power saving itself only exists with it on. Kept behind a flag because a

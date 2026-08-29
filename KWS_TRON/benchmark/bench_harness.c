@@ -95,17 +95,6 @@ void bench_task(INT stacd, void *exinf)
                             ? (uint32_t)((idle_delta * 1000000u) / elapsed_cycles)
                             : 0;
 
-    /* The inference core keeps its activation arenas in static storage, so it
-       is single instance. Suspending the pipeline for the duration is both what
-       makes this safe and what makes the measurement clean: nothing else is
-       competing for the core or the cycle counter while a run is timed. */
-    const ID suspended[] = { tskid_t1, tskid_t2, tskid_t3, tskid_t4 };
-    for (unsigned i = 0; i < sizeof(suspended) / sizeof(suspended[0]); i++) {
-        if (suspended[i] > 0) {
-            tk_sus_tsk(suspended[i]);
-        }
-    }
-
     static bench_run_t run;
     const uint32_t all_int8 = 0u;
     const uint32_t all_fp32 = (KWS_NUM_LAYERS >= 32)
@@ -113,6 +102,63 @@ void bench_task(INT stacd, void *exinf)
                                   : ((1u << KWS_NUM_LAYERS) - 1u);
 
     tm_putstring((UB *)"BENCH_BEGIN\n");
+
+    /* Live phase. Each configuration drives the whole pipeline for a fixed
+       window, which is the only way to measure accuracy end to end rather than
+       on pre computed features, and the only way to compare configurations on
+       energy without an ammeter: less work per classification shows up as more
+       time asleep. */
+    static const struct {
+        const char *name;
+        uint32_t mask;
+        uint8_t  pinned;
+    } live_configs[] = {
+        { "fp32",     0u, 1 },   /* mask filled in below, all_fp32 is not const */
+        { "int8",     0u, 1 },
+        { "adaptive", 0u, 0 },   /* controller left free, mask ignored */
+    };
+
+    for (unsigned c = 0; c < sizeof(live_configs) / sizeof(live_configs[0]); c++) {
+        if (live_configs[c].pinned) {
+            adapt_state.precision_mask = (c == 0) ? all_fp32 : all_int8;
+            adapt_state.pin_precision = 1;
+        } else {
+            adapt_state.pin_precision = 0;
+        }
+
+        t4_stats.inferences = 0;
+        t4_stats.scored = 0;
+        t4_stats.correct = 0;
+        uint64_t live_idle0 = bsp_idle_cycles();
+        uint32_t live_ov0 = signal_source_overruns();
+        uint32_t live_blocks0 = signal_source_block_count();
+
+        tk_dly_tsk(BENCH_LIVE_MS);
+
+        uint64_t live_idle = bsp_idle_cycles() - live_idle0;
+        uint64_t live_elapsed = (uint64_t)BENCH_LIVE_MS * (SYSTEM_CLOCK_HZ / 1000u);
+        tm_printf((UB *)"BENCH_LIVE %s mask=%08x ms=%u inferences=%u scored=%u correct=%u idle_ppm=%u blocks=%u overruns=%u\n",
+                  live_configs[c].name, (unsigned)adapt_state.precision_mask,
+                  (unsigned)BENCH_LIVE_MS, (unsigned)t4_stats.inferences,
+                  (unsigned)t4_stats.scored, (unsigned)t4_stats.correct,
+                  (unsigned)((live_idle * 1000000u) / live_elapsed),
+                  (unsigned)(signal_source_block_count() - live_blocks0),
+                  (unsigned)(signal_source_overruns() - live_ov0));
+    }
+    adapt_state.pin_precision = 0;
+
+    /* Static phase. The core keeps its activation arenas in static storage, so
+       it is single instance; suspending the pipeline is what makes measuring it
+       safe. The producer is paused too, because leaving the DMA filling buffers
+       nobody drains counts every one of those blocks as a consumer overrun and
+       makes a clean pipeline look like a failing one. */
+    signal_source_pause();
+    const ID suspended[] = { tskid_t1, tskid_t2, tskid_t3, tskid_t4 };
+    for (unsigned i = 0; i < sizeof(suspended) / sizeof(suspended[0]); i++) {
+        if (suspended[i] > 0) {
+            tk_sus_tsk(suspended[i]);
+        }
+    }
 
     bench_run("int8", all_int8, 0, &run);
     report(&run);
@@ -172,6 +218,7 @@ void bench_task(INT stacd, void *exinf)
               (unsigned)t4_stats.correct, (unsigned)t4_stats.overruns,
               (unsigned)t3_stats.frames_computed, (unsigned)t3_stats.frames_skipped,
               (unsigned)t3_stats.resyncs, (unsigned)signal_source_overruns());
+    tm_printf((UB *)"BENCH_GRID restarts=%u\n", (unsigned)t3_stats.grid_restarts);
     tm_printf((UB *)"BENCH_CAPTURE waited_ms=%u blocks=%u rate_per_s=%u expected_per_s=%u window=%u overruns=%u\n",
               (unsigned)waited_ms, (unsigned)blocks_seen_total,
               (unsigned)block_rate_mhz,
@@ -190,6 +237,7 @@ void bench_task(INT stacd, void *exinf)
             tk_rsm_tsk(suspended[i]);
         }
     }
+    signal_source_resume();
 
     tk_slp_tsk(TMO_FEVR);
 }

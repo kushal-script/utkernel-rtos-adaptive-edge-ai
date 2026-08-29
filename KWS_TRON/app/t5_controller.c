@@ -210,7 +210,7 @@ void t5_controller_task(INT stacd, void *exinf)
             /* Precision is only adjusted once the cost table is measured.
                Until then the controller has no basis for ranking layers and
                would be guessing, which is what the calibration exists to avoid. */
-            if (t4_cost_table.valid) {
+            if (t4_cost_table.valid && !adapt_state.pin_precision) {
                 t5_move_t move = best_move(mask);
                 if (move.index >= 0) {
                     if (move.action == T5_ACTION_DEMOTE) {

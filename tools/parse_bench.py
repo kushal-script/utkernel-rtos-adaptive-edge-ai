@@ -24,7 +24,14 @@ RUN_RE = re.compile(
     r"mean=(?P<mean>\d+) worst=(?P<worst>\d+) best=(?P<best>\d+) us=(?P<us>\d+)"
 )
 LAYER_RE = re.compile(r"BENCH_LAYER (?P<name>\S+) (?P<index>\d+) (?P<layer>\S+) (?P<cycles>\d+)")
-STATE_RE = re.compile(r"BENCH_(?P<kind>STATE|CONTROL|MEMORY) (?P<body>.*)")
+STATE_RE = re.compile(
+    r"BENCH_(?P<kind>STATE|CONTROL|MEMORY|CONVERGE|PIPELINE|CAPTURE|POWER|GRID) (?P<body>.*)"
+)
+LIVE_RE = re.compile(
+    r"BENCH_LIVE (?P<name>\S+) mask=(?P<mask>\w+) ms=(?P<ms>\d+) inferences=(?P<inf>\d+) "
+    r"scored=(?P<scored>\d+) correct=(?P<correct>\d+) idle_ppm=(?P<idle>\d+) "
+    r"blocks=(?P<blocks>\d+) overruns=(?P<ov>\d+)"
+)
 
 
 def read_serial(port: str, baud: int = 115200, timeout: float = 120.0) -> str:
@@ -52,7 +59,7 @@ def read_serial(port: str, baud: int = 115200, timeout: float = 120.0) -> str:
 
 
 def parse(text: str) -> dict:
-    runs, layers, state = {}, {}, {}
+    runs, layers, state, live = {}, {}, {}, {}
 
     for match in RUN_RE.finditer(text):
         data = match.groupdict()
@@ -64,6 +71,21 @@ def parse(text: str) -> dict:
             "worst_cycles": int(data["worst"]),
             "best_cycles": int(data["best"]),
             "mean_us": int(data["us"]),
+        }
+
+    for match in LIVE_RE.finditer(text):
+        d = match.groupdict()
+        scored = int(d["scored"])
+        live[d["name"]] = {
+            "mask": d["mask"],
+            "window_ms": int(d["ms"]),
+            "inferences": int(d["inf"]),
+            "scored": scored,
+            "correct": int(d["correct"]),
+            "accuracy": (int(d["correct"]) / scored) if scored else None,
+            "idle_fraction": int(d["idle"]) / 1e6,
+            "blocks": int(d["blocks"]),
+            "overruns": int(d["ov"]),
         }
 
     for match in LAYER_RE.finditer(text):
@@ -84,7 +106,7 @@ def parse(text: str) -> dict:
 
     for name in layers:
         layers[name].sort(key=lambda row: row["index"])
-    return {"runs": runs, "layers": layers, "state": state}
+    return {"runs": runs, "layers": layers, "state": state, "live": live}
 
 
 def write_plots(plot_dir: Path, parsed: dict):
@@ -116,6 +138,46 @@ def write_plots(plot_dir: Path, parsed: dict):
     fig.tight_layout()
     fig.savefig(plot_dir / "latency_accuracy.png", dpi=140)
     plt.close(fig)
+
+    if parsed.get("live"):
+        names = list(parsed["live"])
+        fig, ax = plt.subplots(1, 2, figsize=(11, 4))
+
+        ax[0].bar(names, [parsed["live"][n]["idle_fraction"] * 100 for n in names])
+        ax[0].set_ylabel("core idle, percent of wall time")
+        ax[0].set_title("energy proxy, whole pipeline live")
+
+        # Wilson intervals, because the end to end sample is small enough that
+        # a bare percentage would overstate what it supports.
+        import math
+
+        centres, errs = [], [[], []]
+        for n in names:
+            row = parsed["live"][n]
+            k, total = row["correct"], row["scored"]
+            if not total:
+                centres.append(0.0)
+                errs[0].append(0.0)
+                errs[1].append(0.0)
+                continue
+            p_hat, z = k / total, 1.96
+            denom = 1 + z * z / total
+            centre = (p_hat + z * z / (2 * total)) / denom
+            half = z * math.sqrt(p_hat * (1 - p_hat) / total +
+                                 z * z / (4 * total * total)) / denom
+            centres.append(p_hat * 100)
+            errs[0].append(max(0.0, (p_hat - (centre - half)) * 100))
+            errs[1].append(max(0.0, ((centre + half) - p_hat) * 100))
+
+        ax[1].bar(names, centres, yerr=errs, capsize=5)
+        ax[1].set_ylabel("end to end accuracy, percent")
+        ax[1].set_ylim(0, 100)
+        ax[1].set_title("end to end accuracy, 95 percent interval")
+        for a in ax:
+            a.grid(alpha=0.3, axis="y")
+        fig.tight_layout()
+        fig.savefig(plot_dir / "live_energy_accuracy.png", dpi=140)
+        plt.close(fig)
 
     if parsed["layers"]:
         fig, ax = plt.subplots(figsize=(9, 4))

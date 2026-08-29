@@ -43,25 +43,36 @@ taken immediately, and the next one ends the sleep. The whole path is behind
 ## What is measured today
 
 The idle hook accumulates the cycles spent asleep, in 64 bits because the cycle
-counter wraps roughly every 17 seconds at this clock. The benchmark reports the
-fraction of wall time the core was idle over the settle window.
+counter wraps roughly every 17 seconds at this clock. The benchmark then runs
+the whole pipeline live for a fixed window in each configuration and reports the
+fraction of wall time the core was idle. Because every configuration sees the
+same replayed audio for the same wall time, the comparison is like for like.
 
-| Quantity | Measured |
-| :-- | --: |
-| Idle residency | 82.3 percent of wall time |
-| Sleep entries | 596 over 4.3 s |
+| Configuration | Core idle | Relative to FP32 |
+| :-- | --: | --: |
+| Static FP32 | 23.5 percent | 1.00 |
+| Static INT8 | 39.9 percent | 1.70 |
+| Adaptive | 40.1 percent | 1.71 |
 
-That is a genuine, on device measurement of the quantity the power argument
-rests on: the core is asleep for most of wall time rather than spinning. It is
-**not** a wattage. Converting it to milliwatts would require datasheet typicals
-for run and sleep current, and such a number would be modelled rather than
-measured, so it is not presented here.
+Thirty second windows, identical corpus, whole pipeline running. The adaptive
+configuration leaves the core asleep **1.71 times as long** as static FP32.
+
+That ratio is the defensible power statement. Idle time is when the core is
+clock gated in sleep rather than executing at 250 MHz, so more of it means less
+energy for the same work, and the comparison holds whatever the absolute
+currents turn out to be. It is deliberately **not** converted to milliwatts:
+that would need datasheet typicals for run and sleep current and would be a
+modelled number wearing the clothes of a measured one.
 
 ## What would close the axis properly
 
-A DC ammeter in series at the IDD jumper, average current over a fixed length
-replay in three configurations, static FP32, static INT8, and adaptive, on the
-corpus that contains silence so the gate is exercised. Report average current
-and energy per classification. Until that is done the honest statement is the
-one above: the mechanism exists, the idle fraction is measured, the current is
-not.
+A DC ammeter in series at the IDD jumper turns the ratio above into absolute
+milliwatts and energy per classification. The firmware side is already done: the
+benchmark holds each configuration for a fixed window with the pipeline live, so
+the procedure is to put the meter in circuit, run once, and read the average
+current during each of the three thirty second windows, which the telemetry
+delimits. Nothing needs to be rebuilt.
+
+Until that is done the honest statement is the one above: the mechanism exists,
+the idle fraction is measured, the ratio between configurations is measured, and
+the absolute current is not.

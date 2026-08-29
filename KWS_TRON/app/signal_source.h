@@ -36,6 +36,14 @@ void signal_source_completed_block(UINT pattern, const int16_t **block,
    An overrun means the pipeline did not keep up, which the benchmark reports
    rather than hides. */
 uint32_t signal_source_block_count(void);
+
+/* Stop and restart the producer. The benchmark suspends the consumer tasks
+   while it measures the core in isolation; without pausing the source too, the
+   DMA keeps filling buffers nobody drains and every one of those blocks is
+   counted as a consumer overrun, which reads as a pipeline failure when it is
+   only an artefact of the measurement. */
+void signal_source_pause(void);
+void signal_source_resume(void);
 uint32_t signal_source_overruns(void);
 
 /* Marks the block handed out by signal_source_completed_block as consumed. The

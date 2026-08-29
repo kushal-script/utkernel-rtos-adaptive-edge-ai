@@ -77,6 +77,16 @@ void t3_features_task(INT stacd, void *exinf)
         if (tk_ref_flg(flgid_gate, &gate) == E_OK &&
             (gate.flgptn & FLG_SKIP_FEATURES) != 0) {
             t3_stats.frames_skipped++;
+            /* Frames are not being computed, so the grid is about to have a
+               hole in it. Start it again rather than stitching audio from
+               either side of a silence into one tensor, which would present
+               the model with a clip that never existed and score it against a
+               label that cannot describe it. */
+            if (rows_filled > 0) {
+                rows_filled = 0;
+                since_inference = 0;
+                t3_stats.grid_restarts++;
+            }
             continue;
         }
 

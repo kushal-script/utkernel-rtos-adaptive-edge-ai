@@ -219,6 +219,17 @@ ER signal_source_start(uint32_t samples)
     return start_at(samples, 0);
 }
 
+void signal_source_pause(void)
+{
+    timer_stop();
+}
+
+void signal_source_resume(void)
+{
+    pending = 0;
+    timer_start();
+}
+
 ER signal_source_set_window(uint32_t samples)
 {
     if (samples == window_samples) {
@@ -321,6 +332,9 @@ ER signal_source_set_window(uint32_t samples)
     HAL_I2S_DMAStop(&hi2s2);
     return signal_source_start(samples);
 }
+
+void signal_source_pause(void)  { HAL_I2S_DMAStop(&hi2s2); }
+void signal_source_resume(void) { pending = 0; signal_source_start(window_samples); }
 
 /* A live microphone carries no ground truth, so nothing can be scored from it. */
 uint32_t signal_source_completed_corpus(void) { return 0; }

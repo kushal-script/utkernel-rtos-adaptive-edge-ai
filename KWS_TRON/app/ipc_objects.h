@@ -71,6 +71,9 @@ typedef struct {
     volatile uint32_t precision_mask;   /* bit n set means layer n runs FP32 */
     volatile uint32_t deadline_cycles;
     volatile uint32_t vad_threshold;    /* energy units, tracked by T5 */
+    /* Set while the benchmark holds a configuration fixed so it can measure one
+       precision end to end. The controller leaves the mask alone when set. */
+    volatile uint32_t pin_precision;
 } adapt_state_t;
 
 extern adapt_state_t adapt_state;

@@ -22,6 +22,7 @@ typedef struct {
     uint32_t inferences_queued;
     uint32_t last_frame_cycles;
     uint32_t resyncs;          /* times the producer lapped the frame history */
+    uint32_t grid_restarts;    /* grids abandoned because the gate closed mid fill */
     uint32_t grid_corpus_end;  /* corpus index the newest grid row ends at    */
 } t3_stats_t;
 
