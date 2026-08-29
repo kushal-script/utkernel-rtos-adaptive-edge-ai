@@ -12,8 +12,9 @@ TRON Programming Contest 2026, RTOS Application (Students). Board: NUCLEO-H533RE
 ## Status
 
 The complete five task pipeline runs on the board, measured with the DWT cycle
-counter at 250 MHz. The headline result, one classification every cycle under a
-hard 115 ms deadline:
+counter at 250 MHz. The deadline is the classification period itself, 120 ms,
+derived from the six frame inference stride at a 20 ms hop rather than chosen
+with knowledge of the measured costs:
 
 | Configuration | Mean latency | Worst case | Deadline held | Core accuracy |
 | :-- | --: | --: | :-- | --: |

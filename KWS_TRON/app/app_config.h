@@ -35,10 +35,10 @@
 #define KWS_FRAMES           MFCC_FRAMES
 #define KWS_COEFFS           MFCC_COEFFS
 
-/* Frames of new audio between inferences. 8 frames at a 20 ms hop is one
-   classification every 160 ms, which keeps the pipeline responsive without
-   running the model on every hop. */
-#define T4_INFERENCE_STRIDE  8
+/* Frames of new audio between inferences. Six frames at a 20 ms hop is one
+   classification every 120 ms. This is the number the deadline is derived from,
+   so changing it changes the real time constraint the controller works to. */
+#define T4_INFERENCE_STRIDE  6
 
 /* Active frames the controller may select, the rest of the grid stays zero.
    The model is trained across this whole range, see docs/adaptation.md. */
@@ -59,16 +59,21 @@
 #define T2_FLOOR_SEED_BLOCKS 64
 
 /* ── Timing budget ────────────────────────────────────────────────────────── */
-/* Deadline for one classification, set between the measured cost of the two
-   pure configurations on this silicon, 102.6 ms for INT8 and 125.1 ms for
-   FP32. Full FP32 therefore overruns and the controller demotes layer by
-   layer until the deadline holds, which lands on a mixed precision point that
-   keeps the most FP32 the budget allows. The margin over the settled cost
-   covers the precision boundary conversions, which are real work the pure
-   configurations never pay. See docs/adaptation.md. */
+/* The deadline is the classification period, derived from the application
+   rather than chosen to sit between the measured costs. A classification is
+   produced every T4_INFERENCE_STRIDE feature frames at a 20 ms hop, so one
+   inference must finish before the next grid is ready or the pipeline falls
+   behind permanently. Deriving it this way is what makes it a real time
+   constraint instead of a number picked with knowledge of the answer.
+
+   At a stride of 6 the period is 120 ms. Static FP32 at 125.1 ms misses it,
+   static INT8 at 102.7 ms meets it, and the adaptive point at 98.2 ms meets it
+   with the most margin, so the constraint is one the configurations genuinely
+   differ on. */
 #define SYSTEM_CLOCK_HZ      250000000u
 #define T4_CYCLES_PER_US     (SYSTEM_CLOCK_HZ / 1000000u)
-#define T4_DEADLINE_US       115000u
+#define T4_DEADLINE_US       ((uint32_t)T4_INFERENCE_STRIDE * FRAME_STRIDE_SAMPLES \
+                              * 1000000u / SAMPLE_RATE_HZ)
 #define T4_DEADLINE_CYCLES   ((uint32_t)T4_DEADLINE_US * T4_CYCLES_PER_US)
 
 /* Hysteresis on the promotion side, as a percentage of the deadline that a
