@@ -26,6 +26,27 @@ typedef struct {
 
 extern t4_stats_t t4_stats;
 
+/* What each layer actually costs in each precision on this part, measured on
+   the first two inferences rather than assumed. The controller ranks layers by
+   the measured delta, which matters because the assumption that INT8 is always
+   the cheaper choice is false here: the depthwise kernels are scalar and lose
+   to the floating point unit. See docs/adaptation.md. */
+typedef struct {
+    uint32_t fp32_cycles[KWS_NUM_LAYERS];
+    uint32_t int8_cycles[KWS_NUM_LAYERS];
+    uint8_t  valid;
+} t4_cost_table_t;
+
+extern t4_cost_table_t t4_cost_table;
+
+/* Cycles saved by running layer `index` in INT8 instead of FP32. Negative when
+   INT8 is the slower choice for that layer. */
+int32_t t4_layer_saving(uint32_t index);
+
+/* Projected cost of a whole precision mask from the measured table. Excludes
+   boundary conversions, so it ranks candidates rather than predicting latency. */
+uint32_t t4_estimate_cycles(uint32_t mask);
+
 void t4_inference_task(INT stacd, void *exinf);
 
 /* Weight bytes a layer needs in the given precision, used for pool sizing and

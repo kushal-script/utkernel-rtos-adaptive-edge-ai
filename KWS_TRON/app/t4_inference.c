@@ -1,5 +1,6 @@
 #include "t4_inference.h"
 
+#include <stdbool.h>
 #include <string.h>
 
 #include <tm/tmonitor.h>
@@ -11,6 +12,29 @@
 #include "t3_features.h"
 
 t4_stats_t t4_stats;
+t4_cost_table_t t4_cost_table;
+
+/* Calibration runs the first two inferences at the two pure precisions so the
+   controller starts from measurement rather than from an assumption. Two
+   inferences is about a third of a second and happens once at startup. */
+#define CALIBRATION_INFERENCES 2
+static uint32_t calibration_step;
+
+int32_t t4_layer_saving(uint32_t index)
+{
+    return (int32_t)t4_cost_table.fp32_cycles[index] -
+           (int32_t)t4_cost_table.int8_cycles[index];
+}
+
+uint32_t t4_estimate_cycles(uint32_t mask)
+{
+    uint32_t total = 0;
+    for (uint32_t i = 0; i < KWS_NUM_LAYERS; i++) {
+        total += ((mask >> i) & 1u) ? t4_cost_table.fp32_cycles[i]
+                                    : t4_cost_table.int8_cycles[i];
+    }
+    return total;
+}
 
 /* Overrides the weak stub in the core, so the timing the core records is the
    hardware cycle counter rather than zero. */
@@ -98,10 +122,30 @@ void t4_inference_task(INT stacd, void *exinf)
             continue;
         }
 
-        uint32_t mask = adapt_state.precision_mask;
-        uint32_t deadline = adapt_state.deadline_cycles;
+        /* While calibrating, force the pure precisions and enforce no deadline,
+           so the two probe inferences are never mistaken for overruns. */
+        bool calibrating = calibration_step < CALIBRATION_INFERENCES;
+        uint32_t all_fp32 = (KWS_NUM_LAYERS >= 32)
+                                ? 0xFFFFFFFFu
+                                : ((1u << KWS_NUM_LAYERS) - 1u);
+        uint32_t mask = calibrating ? (calibration_step == 0 ? all_fp32 : 0u)
+                                    : adapt_state.precision_mask;
+        uint32_t deadline = calibrating ? 0u : adapt_state.deadline_cycles;
 
         kws_infer(t3_feature_grid, mask, deadline, &t4_stats.last);
+
+        if (calibrating) {
+            uint32_t *slot = (calibration_step == 0) ? t4_cost_table.fp32_cycles
+                                                     : t4_cost_table.int8_cycles;
+            for (uint32_t i = 0; i < KWS_NUM_LAYERS; i++) {
+                slot[i] = t4_stats.last.layer_cycles[i];
+            }
+            calibration_step++;
+            if (calibration_step >= CALIBRATION_INFERENCES) {
+                t4_cost_table.valid = 1;
+            }
+            continue;
+        }
 
         t4_stats.inferences++;
         if (t4_stats.last.total_cycles > t4_stats.worst_cycles) {

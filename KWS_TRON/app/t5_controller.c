@@ -1,5 +1,8 @@
 #include "t5_controller.h"
 
+#include <stdbool.h>
+#include <stdint.h>
+
 #include <tm/tmonitor.h>
 
 #include "app_config.h"
@@ -10,6 +13,10 @@
 #include "t4_inference.h"
 
 t5_stats_t t5_stats;
+t5_trace_t t5_trace[BENCH_HISTORY];
+uint32_t t5_trace_count;
+
+uint32_t t5_trace_capacity(void) { return BENCH_HISTORY; }
 
 /* Window resize messages are sent from a small rotating pool, because a
    mailbox message must stay valid until the receiver has taken it. */
@@ -45,19 +52,6 @@ static uint32_t clamp_window(uint32_t value)
     return value - (value % T1_WINDOW_STEP);
 }
 
-/* Demote the latest FP32 layer to INT8. Later layers are demoted first because
-   the earliest layers carry the most information about the input. */
-static bool demote_one(uint32_t *mask)
-{
-    for (int32_t i = KWS_NUM_LAYERS - 1; i >= 0; i--) {
-        if ((*mask >> i) & 1u) {
-            *mask &= ~(1u << i);
-            return true;
-        }
-    }
-    return false;
-}
-
 /* The gate lever from the program plan. T3 peeks this flag without blocking,
    so the controller can suppress the feature stage entirely on silence. */
 static void set_feature_gate(bool skip)
@@ -76,15 +70,55 @@ static void set_inference_priority(PRI priority)
     }
 }
 
-static bool promote_one(uint32_t *mask)
+/* The single move that most reduces projected cost.
+
+   Demoting a layer to INT8 gains its measured saving; promoting one back to
+   FP32 gains the negative of that, which is positive exactly for the layers
+   where FP32 is the faster choice. Ranking both directions on one scale makes
+   the policy a hill climb on measured cost: every accepted move strictly
+   reduces the projection, so the walk cannot cycle and must terminate.
+
+   The deadline is a constraint the walk satisfies on the way, not the goal.
+   Stopping at the first mask that merely meets the deadline would leave the
+   controller worse than a static INT8 build, which is the trap this policy
+   avoids. On this part the optimum is mixed, because the depthwise layers are
+   slower in INT8, and no single precision build can express it. */
+typedef struct {
+    int32_t index;
+    uint8_t action;
+    int32_t gain;
+} t5_move_t;
+
+static t5_move_t best_move(uint32_t mask)
 {
+    t5_move_t best = { -1, T5_ACTION_NONE, 0 };
+
     for (uint32_t i = 0; i < KWS_NUM_LAYERS; i++) {
-        if (((*mask >> i) & 1u) == 0u) {
-            *mask |= (1u << i);
-            return true;
+        bool is_fp32 = ((mask >> i) & 1u) != 0u;
+        int32_t gain = is_fp32 ? t4_layer_saving(i) : -t4_layer_saving(i);
+        if (gain > best.gain) {
+            best.gain = gain;
+            best.index = (int32_t)i;
+            best.action = is_fp32 ? T5_ACTION_DEMOTE : T5_ACTION_PROMOTE;
         }
     }
-    return false;
+    return best;
+}
+
+static void trace_decision(uint32_t before, uint32_t after, uint8_t action,
+                           uint8_t over, uint32_t cycles)
+{
+    if (t5_trace_count >= BENCH_HISTORY) {
+        return;
+    }
+    t5_trace_t *row = &t5_trace[t5_trace_count++];
+    row->decision     = (uint16_t)t5_stats.decisions;
+    row->mask_before  = (uint16_t)before;
+    row->mask_after   = (uint16_t)after;
+    row->action       = action;
+    row->over_deadline = over;
+    row->cycles       = cycles;
+    row->ewma         = t5_stats.cycles_ewma;
 }
 
 void t5_controller_task(INT stacd, void *exinf)
@@ -101,6 +135,8 @@ void t5_controller_task(INT stacd, void *exinf)
     uint32_t window = T1_WINDOW_DEFAULT;
     uint32_t active = T3_ACTIVE_FRAMES_MAX;
     uint32_t quiet_run = 0;
+    uint32_t settled = 0;
+    uint32_t probe_started = 0;
 
     for (;;) {
         UINT pattern = 0;
@@ -157,29 +193,67 @@ void t5_controller_task(INT stacd, void *exinf)
                                              (t5_stats.cycles_ewma / 8u) + (cost / 8u);
 
             uint32_t deadline = adapt_state.deadline_cycles;
+            uint32_t before = mask;
+            uint8_t action = T5_ACTION_NONE;
+            uint8_t over = ((pattern & FLG_BUDGET_EXCEEDED) || cost > deadline);
 
-            if ((pattern & FLG_BUDGET_EXCEEDED) || cost > deadline) {
-                if (demote_one(&mask)) {
+            if (over) {
+                t5_stats.deadline_misses++;
+            }
+
+            /* Precision is only adjusted once the cost table is measured.
+               Until then the controller has no basis for ranking layers and
+               would be guessing, which is what the calibration exists to avoid. */
+            if (t4_cost_table.valid) {
+                t5_move_t move = best_move(mask);
+                if (move.index >= 0) {
+                    if (move.action == T5_ACTION_DEMOTE) {
+                        mask &= ~(1u << move.index);
+                        t5_stats.demotions++;
+                    } else {
+                        mask |= (1u << move.index);
+                        t5_stats.promotions++;
+                    }
                     adapt_state.precision_mask = mask;
-                    t5_stats.demotions++;
+                    action = move.action;
                 }
-                if (!t5_stats.urgent) {
+
+                /* Priority tracks the deadline, not the move. */
+                if (over && !t5_stats.urgent) {
                     set_inference_priority(PRI_T4_URGENT);
                     t5_stats.urgent = 1;
                     t5_stats.priority_raises++;
-                }
-            } else if (((pattern & FLG_BUDGET_EXCEEDED) == 0) &&
-                       t5_stats.cycles_ewma * 2u < deadline) {
-                /* Comfortable slack, take some accuracy back. */
-                if (promote_one(&mask)) {
-                    adapt_state.precision_mask = mask;
-                    t5_stats.promotions++;
-                }
-                if (t5_stats.urgent) {
+                } else if (!over && t5_stats.urgent) {
                     set_inference_priority(PRI_T4_INFERENCE);
                     t5_stats.urgent = 0;
                 }
             }
+
+            /* Convergence is declared when no move improves cost for a while.
+               On the first convergence the controller restarts once from the
+               opposite extreme: if the walk lands on the same mask from both
+               ends, the operating point is a property of the silicon rather
+               than of where the search began. */
+            if (action == T5_ACTION_NONE) {
+                settled++;
+                if (settled >= T5_CONVERGE_DECISIONS && !t5_stats.converged) {
+                    t5_stats.converged_at = t5_stats.decisions;
+                    if (!probe_started) {
+                        probe_started = 1;
+                        t5_stats.converged_mask = mask;
+                        settled = 0;
+                        mask = 0u;
+                        adapt_state.precision_mask = mask;
+                    } else {
+                        t5_stats.converged = 1;
+                        t5_stats.probe_mask = mask;
+                    }
+                }
+            } else {
+                settled = 0;
+            }
+
+            trace_decision(before, mask, action, over, cost);
 
             /* Speech is present, favour responsiveness and full context. */
             uint32_t tighter = clamp_window(window - T1_WINDOW_STEP);

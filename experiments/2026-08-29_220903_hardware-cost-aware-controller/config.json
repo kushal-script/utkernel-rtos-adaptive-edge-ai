@@ -1,0 +1,209 @@
+{
+  "runs": {
+    "int8": {
+      "mask": "00000000",
+      "samples": 150,
+      "accuracy": 0.94,
+      "mean_cycles": 26702880,
+      "worst_cycles": 26732898,
+      "best_cycles": 26678265,
+      "mean_us": 106811
+    },
+    "fp32": {
+      "mask": "000003ff",
+      "samples": 150,
+      "accuracy": 0.94,
+      "mean_cycles": 31272414,
+      "worst_cycles": 31272720,
+      "best_cycles": 31271816,
+      "mean_us": 125089
+    },
+    "adaptive": {
+      "mask": "000000aa",
+      "samples": 150,
+      "accuracy": 0.94,
+      "mean_cycles": 24676673,
+      "worst_cycles": 24699658,
+      "best_cycles": 24658274,
+      "mean_us": 98706
+    }
+  },
+  "layers": {
+    "int8": [
+      {
+        "index": 0,
+        "layer": "stem",
+        "cycles": 5667533
+      },
+      {
+        "index": 1,
+        "layer": "dw0",
+        "cycles": 2250365
+      },
+      {
+        "index": 2,
+        "layer": "pw0",
+        "cycles": 2721945
+      },
+      {
+        "index": 3,
+        "layer": "dw1",
+        "cycles": 2248390
+      },
+      {
+        "index": 4,
+        "layer": "pw1",
+        "cycles": 2625867
+      },
+      {
+        "index": 5,
+        "layer": "dw2",
+        "cycles": 2383574
+      },
+      {
+        "index": 6,
+        "layer": "pw2",
+        "cycles": 2614950
+      },
+      {
+        "index": 7,
+        "layer": "dw3",
+        "cycles": 3344539
+      },
+      {
+        "index": 8,
+        "layer": "pw3",
+        "cycles": 2627374
+      },
+      {
+        "index": 9,
+        "layer": "fc",
+        "cycles": 3430
+      }
+    ],
+    "fp32": [
+      {
+        "index": 0,
+        "layer": "stem",
+        "cycles": 7451525
+      },
+      {
+        "index": 1,
+        "layer": "dw0",
+        "cycles": 1554804
+      },
+      {
+        "index": 2,
+        "layer": "pw0",
+        "cycles": 4236868
+      },
+      {
+        "index": 3,
+        "layer": "dw1",
+        "cycles": 1554792
+      },
+      {
+        "index": 4,
+        "layer": "pw1",
+        "cycles": 4236890
+      },
+      {
+        "index": 5,
+        "layer": "dw2",
+        "cycles": 1554806
+      },
+      {
+        "index": 6,
+        "layer": "pw2",
+        "cycles": 4236901
+      },
+      {
+        "index": 7,
+        "layer": "dw3",
+        "cycles": 1554801
+      },
+      {
+        "index": 8,
+        "layer": "pw3",
+        "cycles": 4237003
+      },
+      {
+        "index": 9,
+        "layer": "fc",
+        "cycles": 4872
+      }
+    ],
+    "adaptive": [
+      {
+        "index": 0,
+        "layer": "stem",
+        "cycles": 5667540
+      },
+      {
+        "index": 1,
+        "layer": "dw0",
+        "cycles": 1554757
+      },
+      {
+        "index": 2,
+        "layer": "pw0",
+        "cycles": 2721739
+      },
+      {
+        "index": 3,
+        "layer": "dw1",
+        "cycles": 1554779
+      },
+      {
+        "index": 4,
+        "layer": "pw1",
+        "cycles": 2625857
+      },
+      {
+        "index": 5,
+        "layer": "dw2",
+        "cycles": 1554796
+      },
+      {
+        "index": 6,
+        "layer": "pw2",
+        "cycles": 2614914
+      },
+      {
+        "index": 7,
+        "layer": "dw3",
+        "cycles": 1554807
+      },
+      {
+        "index": 8,
+        "layer": "pw3",
+        "cycles": 2627353
+      },
+      {
+        "index": 9,
+        "layer": "fc",
+        "cycles": 3436
+      }
+    ]
+  },
+  "state": {
+    "state": {
+      "vad_threshold": 48,
+      "noise_floor": 6,
+      "blocks": 140,
+      "active": 136
+    },
+    "control": {
+      "decisions": 10,
+      "demote": 6,
+      "promote": 0,
+      "window": 8,
+      "pri": 1,
+      "ewma": 29997114
+    },
+    "memory": {
+      "peak_pool_bytes": 16384,
+      "pool_capacity": 20480
+    }
+  }
+}

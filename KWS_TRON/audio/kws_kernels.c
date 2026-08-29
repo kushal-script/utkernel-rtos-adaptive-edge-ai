@@ -308,8 +308,13 @@ void kws_dequantise(const int8_t *input, float *output, uint32_t count,
 void kws_quantise(const float *input, int8_t *output, uint32_t count,
                   float scale, int32_t zero_point)
 {
+    /* Multiply by the reciprocal rather than divide per element. A single
+       precision divide is an order of magnitude more expensive than a multiply
+       on this core, and this loop runs over the whole activation tensor at
+       every precision boundary, so it is the dominant cost of a mixed mask. */
+    const float inv_scale = 1.0f / scale;
     for (uint32_t i = 0; i < count; i++) {
-        int32_t q = (int32_t)lrintf(input[i] / scale) + zero_point;
+        int32_t q = (int32_t)lrintf(input[i] * inv_scale) + zero_point;
         output[i] = (int8_t)clamp(q, -128, 127);
     }
 }

@@ -9,7 +9,9 @@
 #include "eval_set.h"
 #include "ipc_objects.h"
 #include "kws_infer.h"
+#include "signal_source.h"
 #include "t2_variance.h"
+#include "t3_features.h"
 #include "t4_inference.h"
 #include "t5_controller.h"
 
@@ -95,10 +97,41 @@ void bench_task(INT stacd, void *exinf)
     bench_run("fp32", all_fp32, 0, &run);
     report(&run);
 
-    /* Whatever the controller has converged to while the pipeline ran. */
-    bench_run("adaptive", adapt_state.precision_mask, adapt_state.deadline_cycles,
-              &run);
+    /* The operating point the controller settled on, not whatever it happened
+       to be trying when the benchmark started. */
+    uint32_t settled_mask = t5_stats.converged ? t5_stats.converged_mask
+                                               : adapt_state.precision_mask;
+    bench_run("adaptive", settled_mask, adapt_state.deadline_cycles, &run);
     report(&run);
+
+    /* The measured per layer cost table the controller ranked layers by. This
+       is the evidence that the mixed operating point is not reachable by any
+       single precision compile. */
+    if (t4_cost_table.valid) {
+        for (uint32_t l = 0; l < KWS_NUM_LAYERS; l++) {
+            tm_printf((UB *)"BENCH_COST %u %s int8=%u fp32=%u saving=%d\n",
+                      (unsigned)l, kws_layers[l].name,
+                      (unsigned)t4_cost_table.int8_cycles[l],
+                      (unsigned)t4_cost_table.fp32_cycles[l],
+                      (int)t4_layer_saving(l));
+        }
+        tm_printf((UB *)"BENCH_ESTIMATE int8=%u fp32=%u settled=%u mask=%08x\n",
+                  (unsigned)t4_estimate_cycles(all_int8),
+                  (unsigned)t4_estimate_cycles(all_fp32),
+                  (unsigned)t4_estimate_cycles(settled_mask),
+                  (unsigned)settled_mask);
+    }
+
+    /* The convergence transient, so the trajectory can be plotted and the
+       deadline misses during convergence counted rather than hidden. */
+    for (uint32_t i = 0; i < t5_trace_count; i++) {
+        const t5_trace_t *row = &t5_trace[i];
+        tm_printf((UB *)"BENCH_TRACE %u before=%04x after=%04x act=%u over=%u cycles=%u ewma=%u\n",
+                  (unsigned)row->decision, (unsigned)row->mask_before,
+                  (unsigned)row->mask_after, (unsigned)row->action,
+                  (unsigned)row->over_deadline, (unsigned)row->cycles,
+                  (unsigned)row->ewma);
+    }
 
     tm_printf((UB *)"BENCH_STATE vad_threshold=%u noise_floor=%u blocks=%u active=%u\n",
               (unsigned)adapt_state.vad_threshold, (unsigned)t2_stats.noise_floor,
@@ -107,6 +140,15 @@ void bench_task(INT stacd, void *exinf)
               (unsigned)t5_stats.decisions, (unsigned)t5_stats.demotions,
               (unsigned)t5_stats.promotions, (unsigned)t5_stats.window_changes,
               (unsigned)t5_stats.priority_raises, (unsigned)t5_stats.cycles_ewma);
+    tm_printf((UB *)"BENCH_CONVERGE converged=%u mask=%08x at=%u misses=%u traced=%u\n",
+              (unsigned)t5_stats.converged, (unsigned)t5_stats.converged_mask,
+              (unsigned)t5_stats.converged_at, (unsigned)t5_stats.deadline_misses,
+              (unsigned)t5_trace_count);
+    tm_printf((UB *)"BENCH_PIPELINE inferences=%u scored=%u correct=%u overruns=%u frames=%u skipped=%u resyncs=%u capture_overruns=%u\n",
+              (unsigned)t4_stats.inferences, (unsigned)t4_stats.scored,
+              (unsigned)t4_stats.correct, (unsigned)t4_stats.overruns,
+              (unsigned)t3_stats.frames_computed, (unsigned)t3_stats.frames_skipped,
+              (unsigned)t3_stats.resyncs, (unsigned)signal_source_overruns());
     tm_printf((UB *)"BENCH_MEMORY peak_pool_bytes=%u pool_capacity=%u\n",
               (unsigned)t4_stats.peak_pool_bytes, (unsigned)KWS_LAYER_POOL_BYTES);
     tm_putstring((UB *)"BENCH_END\n");

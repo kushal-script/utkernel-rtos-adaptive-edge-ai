@@ -23,7 +23,35 @@ typedef struct {
     uint32_t cycles_ewma;      /* learned cost of one inference         */
     uint32_t threshold_updates;
     uint8_t  urgent;           /* T4 currently running at raised priority */
+    uint8_t  converged;        /* no lever has moved for T5_CONVERGE_DECISIONS */
+    uint32_t converged_mask;
+    uint32_t probe_mask;       /* where a restart from the other extreme landed */
+    uint32_t converged_at;     /* decision index convergence was declared */
+    uint32_t deadline_misses;  /* inferences over the deadline, mostly transient */
 } t5_stats_t;
+
+/* One controller decision, kept so the convergence transient can be plotted
+   rather than only its endpoint. This is the figure the roadmap M6 exit asks
+   for: latency against inference index with the deadline and the moves marked. */
+typedef enum {
+    T5_ACTION_NONE = 0,
+    T5_ACTION_DEMOTE,
+    T5_ACTION_PROMOTE,
+} t5_action_t;
+
+typedef struct {
+    uint16_t decision;
+    uint16_t mask_before;
+    uint16_t mask_after;
+    uint8_t  action;
+    uint8_t  over_deadline;
+    uint32_t cycles;
+    uint32_t ewma;
+} t5_trace_t;
+
+extern t5_trace_t t5_trace[];
+extern uint32_t t5_trace_count;
+uint32_t t5_trace_capacity(void);
 
 extern t5_stats_t t5_stats;
 
