@@ -27,10 +27,27 @@ current itself still needs a meter. See [power.md](power.md).
 
 ### Accuracy
 
-Classification accuracy on the labelled evaluation set that travels in flash,
-reported for each configuration. Adaptation trades a stated and small accuracy
-cost for latency and power headroom, and the cost must be measured rather than
-assumed.
+Two different measurements share the word accuracy and they must not be
+conflated.
+
+**Core accuracy** is scored on the labelled grids in `eval_set.c`, which are
+pre computed features. It exercises the inference core and nothing upstream, so
+it is the right number for a claim about quantisation and precision switching,
+and the wrong number for a claim about the pipeline. It is 94.0 percent, and
+identical across every precision configuration.
+
+**End to end accuracy** is scored on device from replayed audio through capture,
+the gate, feature extraction, and inference. It is now measured, having
+previously been impossible because the scoring guard demanded the feature grid
+sit entirely inside one replay clip, which a grid spanning nearly a whole clip
+essentially never does. On the current six clip corpus it lands on roughly ten
+scored classifications per run and varies widely between runs, so it is
+reported as a raw count and **not** stated as a percentage: the sample is far
+too small, and there is a known limitation behind it, the feature grid can
+stitch across a gate closure and so contain frames from either side of a
+silence. Widening that sample is future work, and the honest position until
+then is that the end to end path works and its accuracy is not yet
+characterised.
 
 ## Running it
 
