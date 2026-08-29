@@ -9,6 +9,7 @@
 #include "app_tasks.h"
 #include "ipc_objects.h"
 #include "kws_model.h"
+#include "signal_source.h"
 #include "t2_variance.h"
 #include "t4_inference.h"
 
@@ -137,6 +138,8 @@ void t5_controller_task(INT stacd, void *exinf)
     uint32_t quiet_run = 0;
     uint32_t settled = 0;
     uint32_t probe_started = 0;
+    uint32_t clean_run = 0;
+    uint32_t last_overruns = 0;
 
     for (;;) {
         UINT pattern = 0;
@@ -258,13 +261,31 @@ void t5_controller_task(INT stacd, void *exinf)
 
             trace_decision(before, mask, action, over, cost);
 
-            /* Speech is present, favour responsiveness and full context. */
-            uint32_t tighter = clamp_window(window - T1_WINDOW_STEP);
+            /* The window trades reaction latency against interrupt rate. A
+               shorter window wakes the pipeline sooner, but it also multiplies
+               the block rate, and past some point the capture chain stops
+               keeping up and drops audio, which is a worse failure than being
+               slightly late. The direction is therefore decided by whether
+               blocks were actually dropped since the last decision rather than
+               by assuming shorter is better. */
+            uint32_t overruns_now = signal_source_overruns();
+            bool capture_behind = overruns_now > last_overruns;
+            last_overruns = overruns_now;
+
+            uint32_t target_window = window;
+            if (capture_behind) {
+                clean_run = 0;
+                target_window = clamp_window(window + T1_WINDOW_STEP);
+            } else if (++clean_run >= T5_WINDOW_SHRINK_AFTER) {
+                clean_run = 0;
+                target_window = clamp_window(window - T1_WINDOW_STEP);
+            }
+
             uint32_t longer = active + 4 < T3_ACTIVE_FRAMES_MAX
                                   ? active + 4
                                   : T3_ACTIVE_FRAMES_MAX;
-            if (tighter != window || longer != active) {
-                window = tighter;
+            if (target_window != window || longer != active) {
+                window = target_window;
                 active = longer;
                 send_window(window, active);
             }

@@ -159,10 +159,10 @@ void bench_task(INT stacd, void *exinf)
               (unsigned)t4_stats.correct, (unsigned)t4_stats.overruns,
               (unsigned)t3_stats.frames_computed, (unsigned)t3_stats.frames_skipped,
               (unsigned)t3_stats.resyncs, (unsigned)signal_source_overruns());
-    tm_printf((UB *)"BENCH_CAPTURE waited_ms=%u blocks=%u rate_mhz=%u expected_mhz=%u window=%u overruns=%u\n",
+    tm_printf((UB *)"BENCH_CAPTURE waited_ms=%u blocks=%u rate_per_s=%u expected_per_s=%u window=%u overruns=%u\n",
               (unsigned)waited_ms, (unsigned)blocks_seen_total,
               (unsigned)block_rate_mhz,
-              (unsigned)((SAMPLE_RATE_HZ * 1000u) / adapt_state.window_samples),
+              (unsigned)(SAMPLE_RATE_HZ / adapt_state.window_samples),
               (unsigned)adapt_state.window_samples,
               (unsigned)signal_source_overruns());
     tm_printf((UB *)"BENCH_MEMORY peak_pool_bytes=%u pool_capacity=%u\n",

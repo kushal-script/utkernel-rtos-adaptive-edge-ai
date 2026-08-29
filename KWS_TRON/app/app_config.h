@@ -81,6 +81,20 @@
    describes a settled system rather than whatever was being tried. */
 #define T5_CONVERGE_DECISIONS 5
 
+/* Consecutive decisions the capture chain must survive without dropping a block
+   before the controller shortens the window again. Shortening wakes the
+   pipeline sooner but multiplies the interrupt rate, so the window is widened
+   the moment a block is dropped and shortened only after sustained evidence
+   that the chain is keeping up. The result is the shortest window this
+   hardware actually sustains, found by measurement. */
+#define T5_WINDOW_SHRINK_AFTER 8
+
+/* Share of the feature grid one replay clip must cover before a classification
+   is scored against that clip's label. Below this the span is too evenly split
+   for any label to be correct, and the result is left unscored rather than
+   guessed. */
+#define REPLAY_SCORE_MAJORITY_PCT 70
+
 /* ── Layer streaming pool ─────────────────────────────────────────────────── */
 /* Only the working layer's weights occupy SRAM, which is what lets a model
    larger than SRAM run at all. Sized for the largest single layer in FP32, the

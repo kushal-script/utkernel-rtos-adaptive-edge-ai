@@ -244,19 +244,42 @@ uint32_t signal_source_completed_corpus(void)
 
 int signal_source_label_for_span(uint32_t end_offset, uint32_t span)
 {
-    /* Only score when the whole span sits inside one clip. A span that crosses
-       a clip boundary or the corpus wrap has no single correct answer, and
-       guessing one would quietly corrupt the reported accuracy. */
-    if (end_offset < span) {
+    /* The grid spans very nearly a whole clip, so demanding that it sit
+       entirely inside one clip means it essentially never does and nothing is
+       ever scored. What is defensible is to score against the clip that
+       dominates the span, and to refuse when no clip dominates, because a span
+       split evenly across two clips has no single correct answer and guessing
+       would quietly corrupt the reported accuracy. */
+    if (span == 0u || end_offset < span) {
         return -1;
     }
+
     uint32_t start_offset = end_offset - span;
     uint32_t first = start_offset / REPLAY_CLIP_SAMPLES;
     uint32_t last  = (end_offset - 1u) / REPLAY_CLIP_SAMPLES;
-    if (first != last || last >= REPLAY_CLIP_COUNT) {
+    if (last >= REPLAY_CLIP_COUNT) {
         return -1;
     }
-    return (int)replay_clip_label[last];
+    if (first == last) {
+        return (int)replay_clip_label[last];
+    }
+    if (last - first > 1u) {
+        return -1;      /* spans three or more clips, nothing dominates */
+    }
+
+    /* Exactly two clips: score only if one of them holds a clear majority. */
+    uint32_t boundary = last * REPLAY_CLIP_SAMPLES;
+    uint32_t in_first = boundary - start_offset;
+    uint32_t in_last  = end_offset - boundary;
+    uint32_t majority = (span * REPLAY_SCORE_MAJORITY_PCT) / 100u;
+
+    if (in_first >= majority) {
+        return (int)replay_clip_label[first];
+    }
+    if (in_last >= majority) {
+        return (int)replay_clip_label[last];
+    }
+    return -1;
 }
 
 void GPDMA1_Channel1_IRQHandler(void)
