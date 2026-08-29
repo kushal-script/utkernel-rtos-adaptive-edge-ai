@@ -107,6 +107,8 @@ behind the same interface for when a live demonstration is wanted. See
 * [Power](docs/power.md), the mechanism, the measurement, and what is not claimed
 * [Operation manual](docs/operation_manual.md), build, flash, and reproduce
 * [Roadmap](docs/roadmap.md), milestones and what each still owes
+* [Introduction slides](docs/TRON2026_intro_slides.pptx), the contest deck, with
+  its content and rebuild steps in [slides_outline.md](docs/slides_outline.md)
 
 ## Build and run
 

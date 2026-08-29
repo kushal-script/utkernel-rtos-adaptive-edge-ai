@@ -84,14 +84,19 @@ weakening it. See [novelty.md](novelty.md).
 
 ## Current position
 
-The pipeline runs on the board and the headline result is measured: FP32 125.1
-ms, INT8 102.7 ms, adaptive 98.2 ms, the adaptive point faster than either pure
+The pipeline runs on the board and the headline result is measured: FP32 125.9
+ms, INT8 101.5 ms, adaptive 98.2 ms, the adaptive point faster than either pure
 build because the cost optimum on this silicon is mixed. The controller reaches
 the same mask from both extremes, six demotions from FP32 and four promotions
 from INT8. The gate closes and reopens on a corpus that contains silence, the
 window is regulated against measured capture overruns, and the idle hook sleeps
 with residency measured at 82.3 percent.
 
-What remains is a current measurement at the IDD jumper for the power axis, a
-larger end to end accuracy sample, and the submission package. TrustZone is cut,
+The introduction slides are built, see
+[TRON2026_intro_slides.pptx](TRON2026_intro_slides.pptx) and the content in
+[slides_outline.md](slides_outline.md), both regenerated from the raw captures
+by `tools/make_slide_figures.py` and `tools/build_slides.js`.
+
+What remains is a current measurement at the IDD jumper for the power axis and
+a larger end to end accuracy sample. TrustZone is cut,
 see the deviations note in [novelty.md](novelty.md).

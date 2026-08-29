@@ -1,8 +1,28 @@
-# Introduction slides, content
+# Introduction slides
 
 The contest requires slides introducing the program as a separate mandatory
-item. This is the content, slide by slide, with the measured numbers already in
-place. Every figure named here exists under `experiments/`.
+item. The built deck is [TRON2026_intro_slides.pptx](TRON2026_intro_slides.pptx),
+eleven slides. This file is the content behind it, slide by slide, so the wording
+can be reviewed and edited without opening PowerPoint.
+
+## Rebuilding
+
+```
+python tools/make_slide_figures.py     # docs/figures from the raw device captures
+node tools/build_slides.js             # docs/TRON2026_intro_slides.pptx
+```
+
+`make_slide_figures.py` reads the raw capture of the path independence run under
+`experiments/` and writes `layer_inversion.png` and `convergence.png`. The deck
+embeds those two, so a slide can never drift from the run it came from: change
+the run, rerun both commands, and the figures follow.
+
+`build_slides.js` needs `pptxgenjs`. Install it locally with `npm install
+pptxgenjs`, or point `NODE_PATH` at a global install.
+
+Speaker notes are attached to every slide in the built file. Edit content here
+first, then regenerate, so this file stays the source of truth rather than a
+stale copy of it.
 
 ---
 
@@ -41,7 +61,7 @@ native kernel primitive.
 
 | Configuration | Latency | 120 ms deadline | Core idle |
 | :-- | --: | :-- | --: |
-| Static FP32 | 125.1 ms | missed | 23.5 percent |
+| Static FP32 | 125.9 ms | missed | 23.5 percent |
 | Static INT8 | 101.5 ms | met | 39.9 percent |
 | **Adaptive** | **98.2 ms** | **met** | **40.1 percent** |
 
@@ -55,9 +75,13 @@ inference stride, not chosen after seeing the costs.
 
 Measured on this silicon, per layer:
 
-* the four depthwise layers are about **45 percent slower in INT8** than FP32,
-  because their kernels are scalar while every other layer uses packed SMLAD
-* every other layer is faster in INT8
+* the four depthwise layers are together **57 percent slower in INT8** than in
+  FP32, between 41 and 82 percent depending on the layer, because their samples
+  are not contiguous and their kernels are still scalar
+* every other layer is **32 percent faster in INT8**, running packed SXTB16 and
+  SMLAD pairs
+* the fully connected layer is a few thousand cycles either way, invisible next
+  to the rest
 
 So the cost optimum is mixed: depthwise at FP32, everything else INT8. **No
 single precision build can express it.**
