@@ -15,10 +15,15 @@ latency is the point, a statistical average is not.
 
 ### Power, average
 
-Measure current through the on board SMPS. The adaptive pipeline spends more
-time in the kernel idle task on quiet input through the gate, which shows up as
-lower average current. Report average power over a fixed workload. This axis
-needs the board and has not been measured.
+Measure current at the IDD jumper, which breaks the supply to the
+microcontroller so a meter can sit in series. It covers the MCU only, so the
+board still enumerates and telemetry still streams while measuring. The
+STM32H533 has no SMPS, and earlier wording here that routed the measurement
+through one was wrong.
+
+The mechanism now exists: the kernel idle hook sleeps rather than spinning, and
+the idle residency is measured on device at 82.3 percent of wall time. Average
+current itself still needs a meter. See [power.md](power.md).
 
 ### Accuracy
 

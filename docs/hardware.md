@@ -2,7 +2,7 @@
 
 ## Board
 
-NUCLEO-H533RE. STM32H533RET6, Cortex-M33 at 250 MHz, 272 KB SRAM, TrustZone, single precision FPU, on board ST-LINK V3 with SWD and SWO. Power is measurable through the SMPS for milliwatt level current readings.
+NUCLEO-H533RE. STM32H533RET6, Cortex-M33 at 250 MHz, 272 KB SRAM, TrustZone, single precision FPU, on board ST-LINK V3 with SWD and SWO. Power is measurable at the IDD jumper, which breaks the MCU supply so a meter can sit in series. This part has no SMPS, see [power.md](power.md).
 
 ## Clock tree
 

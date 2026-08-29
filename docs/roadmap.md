@@ -71,8 +71,8 @@ configurations and reports latency, accuracy, and the per layer profile outside
 every timed region. `tools/parse_bench.py` turns that report into an experiment
 folder with figures.
 
-What remains is the power axis, which needs the board and the SMPS, and the
-headline figure itself, which needs real numbers rather than a harness.
+What remains is a current measurement at the IDD jumper. The mechanism and the
+idle residency are done, see [power.md](power.md).
 
 Exit: one reproducible figure that shows the tradeoff the project claims.
 
@@ -84,11 +84,14 @@ weakening it. See [novelty.md](novelty.md).
 
 ## Current position
 
-The pipeline runs on the board. The capture chain produced blocks at the
-expected cadence, the gate learned its floor and threshold, the controller
-resized the window, raised priority, and converged the precision mask, and the
-benchmark measured the headline comparison with the DWT: FP32 125.1 ms misses
-the 115 ms deadline, INT8 102.6 ms, adaptive 112.0 ms mean and 112.1 ms worst
-case holding it, all at 94.0 percent accuracy, identical to the host. Runs are
-recorded under `experiments/` with the raw captures. What remains is the power
-axis through the SMPS, the M6 exit, and the optional M7 TrustZone stretch.
+The pipeline runs on the board and the headline result is measured: FP32 125.1
+ms, INT8 102.7 ms, adaptive 98.2 ms, the adaptive point faster than either pure
+build because the cost optimum on this silicon is mixed. The controller reaches
+the same mask from both extremes, six demotions from FP32 and four promotions
+from INT8. The gate closes and reopens on a corpus that contains silence, the
+window is regulated against measured capture overruns, and the idle hook sleeps
+with residency measured at 82.3 percent.
+
+What remains is a current measurement at the IDD jumper for the power axis, a
+larger end to end accuracy sample, and the submission package. TrustZone is cut,
+see the deviations note in [novelty.md](novelty.md).

@@ -9,6 +9,7 @@
 #include "eval_set.h"
 #include "ipc_objects.h"
 #include "kws_infer.h"
+#include "power_probe.h"
 #include "signal_source.h"
 #include "t2_variance.h"
 #include "t3_features.h"
@@ -74,6 +75,8 @@ void bench_task(INT stacd, void *exinf)
        and the block count together give the capture rate, which is the check
        that the timer is really pacing the DMA. */
     uint32_t blocks_at_start = signal_source_block_count();
+    uint64_t idle_at_start = bsp_idle_cycles();
+    uint32_t idle_entries_at_start = bsp_idle_entries();
     uint32_t waited_ms = 0;
     while (!t5_stats.converged && waited_ms < BENCH_SETTLE_MAX_MS) {
         tk_dly_tsk(100);
@@ -81,6 +84,16 @@ void bench_task(INT stacd, void *exinf)
     }
     uint32_t blocks_seen_total = signal_source_block_count() - blocks_at_start;
     uint32_t block_rate_mhz = waited_ms ? (blocks_seen_total * 1000u) / waited_ms : 0;
+
+    /* Idle residency over the settle window. The elapsed cycle count is derived
+       from the kernel delay rather than the cycle counter, which wraps every
+       seventeen seconds at this clock. */
+    uint64_t idle_delta = bsp_idle_cycles() - idle_at_start;
+    uint32_t idle_events = bsp_idle_entries() - idle_entries_at_start;
+    uint64_t elapsed_cycles = (uint64_t)waited_ms * (SYSTEM_CLOCK_HZ / 1000u);
+    uint32_t idle_ppm = elapsed_cycles
+                            ? (uint32_t)((idle_delta * 1000000u) / elapsed_cycles)
+                            : 0;
 
     /* The inference core keeps its activation arenas in static storage, so it
        is single instance. Suspending the pipeline for the duration is both what
@@ -165,6 +178,9 @@ void bench_task(INT stacd, void *exinf)
               (unsigned)(SAMPLE_RATE_HZ / adapt_state.window_samples),
               (unsigned)adapt_state.window_samples,
               (unsigned)signal_source_overruns());
+    tm_printf((UB *)"BENCH_POWER idle_ppm=%u idle_entries=%u elapsed_ms=%u idle_cycles_hi=%u idle_cycles_lo=%u\n",
+              (unsigned)idle_ppm, (unsigned)idle_events, (unsigned)waited_ms,
+              (unsigned)(idle_delta >> 32), (unsigned)(idle_delta & 0xFFFFFFFFu));
     tm_printf((UB *)"BENCH_MEMORY peak_pool_bytes=%u pool_capacity=%u\n",
               (unsigned)t4_stats.peak_pool_bytes, (unsigned)KWS_LAYER_POOL_BYTES);
     tm_putstring((UB *)"BENCH_END\n");

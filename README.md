@@ -15,31 +15,48 @@ The complete five task pipeline runs on the board, measured with the DWT cycle
 counter at 250 MHz. The headline result, one classification every cycle under a
 hard 115 ms deadline:
 
-| Configuration | Mean latency | Worst case | Deadline held | Accuracy |
+| Configuration | Mean latency | Worst case | Deadline held | Core accuracy |
 | :-- | --: | --: | :-- | --: |
 | FP32 static | 125.1 ms | 125.1 ms | no | 94.0 percent |
-| INT8 static | 102.6 ms | 102.7 ms | yes | 94.0 percent |
-| Adaptive | 112.0 ms | 112.1 ms | yes | 94.0 percent |
+| INT8 static | 102.7 ms | 102.8 ms | yes | 94.0 percent |
+| **Adaptive** | **98.2 ms** | **98.3 ms** | **yes** | **94.0 percent** |
 
-Starting from full FP32 the controller reads the cycle counter, demotes layers
-one by one, and settles at a stable mixed precision point that holds the
-deadline while keeping the stem, the most information rich layer, at FP32. No
-thrash, nine demotions, zero promotions after convergence. On device accuracy
-matches the host prediction exactly in every configuration, so the core is bit
-faithful on silicon. The capture chain, the learned voice activity gate, window
-resizing, and the priority lever all operated on hardware in the same runs. The
-remaining unmeasured axis is power, which needs the SMPS measurement described
-in [docs/benchmarking.md](docs/benchmarking.md).
+The adaptive point is faster than the best static compile, not a compromise
+between the two. It is a mixed precision mask no single precision build can
+express, and the controller finds it from measurements it takes itself.
+
+The controller calibrates on its first two inferences, measuring what every
+layer costs in each precision on this silicon, then ranks layers by that
+measurement rather than by index. On this part the four depthwise layers are
+about 45 percent slower in INT8, because their kernels are scalar while every
+other layer uses packed multiply accumulate, so the cost optimum is mixed. From
+full FP32 the controller reaches it in six cost reducing demotions; restarted
+from all INT8 it climbs back to the same mask in four promotions. Converging to
+the same operating point from both extremes is what makes it a property of the
+silicon rather than of where the search began.
+
+Two accuracy figures are reported and they are not the same measurement. The
+94.0 percent above is **core accuracy on pre computed feature grids**, which
+exercises the inference core and nothing upstream of it. End to end accuracy,
+through capture, features, and inference, is scored separately on device and is
+currently on too small a sample to state as a figure. See
+[docs/benchmarking.md](docs/benchmarking.md).
+
+Power now has a mechanism as well as a number: the kernel idle hook sleeps
+instead of spinning, and the core is measured asleep for 82.3 percent of wall
+time. That is an idle residency, not a wattage, and
+[docs/power.md](docs/power.md) is explicit about the difference.
 
 | Piece | State |
 | :-- | :-- |
 | Boot, clock, kernel, cycle counter | Working on hardware |
 | Signal source, timer paced DMA replay | Verified on hardware, blocks at the expected cadence |
 | Feature extraction | Matches the host front end to 6e-6, sparse mel projection |
-| Inference core | 94 percent on device, identical to host under every precision mix |
+| Inference core | 94 percent core accuracy, identical to host under every precision mix |
 | INT8 kernels | Packed SMLAD with folded offsets, 1.22 times faster than FP32 |
-| Adaptation controller | Converged on device, holds the deadline with a provable bound |
+| Adaptation controller | Converges to the same mask from both extremes, beats every static build |
 | Trained model | 92.8 percent on twelve class Speech Commands, 23,180 parameters |
+| Power | Idle sleep implemented, core measured asleep 82.3 percent of wall time |
 
 ## The signal source, and why there is no microphone in the loop
 

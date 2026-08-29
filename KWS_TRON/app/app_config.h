@@ -131,6 +131,13 @@
    reported operating point a settled one. */
 #define BENCH_SETTLE_MAX_MS  60000u
 
+/* Put the core to sleep in the kernel idle hook. The idle residency counters
+   are collected either way, so the measurement works with this off, but the
+   power saving itself only exists with it on. Kept behind a flag because a
+   wake up that never arrives stops the whole system, which is a failure worth
+   being able to switch off in one place. See docs/power.md. */
+#define KWS_IDLE_SLEEP       1
+
 /* Bring up probe for a live microphone, off for normal builds. */
 #define KWS_AUDIO_PROBE      0
 #define PROBE_SNAP_FRAMES    8192
