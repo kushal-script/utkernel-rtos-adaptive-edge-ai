@@ -16,11 +16,11 @@ counter at 250 MHz. The deadline is the classification period itself, 120 ms,
 derived from the six frame inference stride at a 20 ms hop rather than chosen
 with knowledge of the measured costs:
 
-| Configuration | Mean latency | Worst case | Deadline held | Core accuracy |
-| :-- | --: | --: | :-- | --: |
-| FP32 static | 125.1 ms | 125.1 ms | no | 94.0 percent |
-| INT8 static | 102.7 ms | 102.8 ms | yes | 94.0 percent |
-| **Adaptive** | **98.2 ms** | **98.3 ms** | **yes** | **94.0 percent** |
+| Configuration | Latency | 120 ms deadline | Core accuracy | Core idle |
+| :-- | --: | :-- | --: | --: |
+| FP32 static | 125.9 ms | missed | 94.0 percent | 23.5 percent |
+| INT8 static | 101.5 ms | met | 94.0 percent | 39.9 percent |
+| **Adaptive** | **98.2 ms** | **met** | **94.0 percent** | **40.1 percent** |
 
 The adaptive point is faster than the best static compile, not a compromise
 between the two. It is a mixed precision mask no single precision build can
@@ -43,10 +43,17 @@ through capture, features, and inference, is scored separately on device and is
 currently on too small a sample to state as a figure. See
 [docs/benchmarking.md](docs/benchmarking.md).
 
-Power now has a mechanism as well as a number: the kernel idle hook sleeps
-instead of spinning, and the core is measured asleep for 82.3 percent of wall
-time. That is an idle residency, not a wattage, and
-[docs/power.md](docs/power.md) is explicit about the difference.
+Power now has a mechanism as well as a number. The kernel idle hook shipped as
+an empty function, so the idle task spun at 250 MHz and no amount of gating work
+upstream could ever show up as power. It now sleeps, and with all three
+configurations driving the whole pipeline over identical thirty second windows
+the core is asleep 40.1 percent of the time adaptive against 23.5 percent for
+static FP32, a factor of **1.71**. That ratio is the claim; it is deliberately
+not converted to milliwatts, and [docs/power.md](docs/power.md) explains why.
+
+The capture chain drops nothing. Earlier reports of thousands of dropped blocks
+were an artefact of the benchmark suspending the consumer while the DMA kept
+producing; with the producer paused too, the live phase overrun count is zero.
 
 | Piece | State |
 | :-- | :-- |
@@ -57,7 +64,8 @@ time. That is an idle residency, not a wattage, and
 | INT8 kernels | Packed SMLAD with folded offsets, 1.22 times faster than FP32 |
 | Adaptation controller | Converges to the same mask from both extremes, beats every static build |
 | Trained model | 92.8 percent on twelve class Speech Commands, 23,180 parameters |
-| Power | Idle sleep implemented, core measured asleep 82.3 percent of wall time |
+| Power | Idle sleep implemented, adaptive leaves the core asleep 1.71 times as long as FP32 |
+| Capture | Zero dropped blocks over a live run, block rate matches the timer pacing |
 
 ## The signal source, and why there is no microphone in the loop
 
@@ -96,17 +104,26 @@ behind the same interface for when a live demonstration is wanted. See
 * [Novelty](docs/novelty.md), the research claim
 * [Hardware](docs/hardware.md), board, clock tree, memory
 * [Benchmarking](docs/benchmarking.md), how the numbers are produced
+* [Power](docs/power.md), the mechanism, the measurement, and what is not claimed
+* [Operation manual](docs/operation_manual.md), build, flash, and reproduce
 * [Roadmap](docs/roadmap.md), milestones and what each still owes
 
-## Build
+## Build and run
+
+No external hardware is needed. The audio the pipeline classifies travels with
+the firmware, so the board on its own reproduces every number here.
 
 ```
-source setup_env.sh
-cmake -S KWS_TRON -B build/Debug -DCMAKE_BUILD_TYPE=Debug \
+cmake -S KWS_TRON -B build/Release -DCMAKE_BUILD_TYPE=Release \
       -DCMAKE_TOOLCHAIN_FILE="$PWD/KWS_TRON/cmake/arm-none-eabi-gcc.cmake"
-cmake --build build/Debug
-flash
+cmake --build build/Release
+STM32_Programmer_CLI -c port=SWD -w build/Release/KWS_TRON.hex -v -rst
+python tools/parse_bench.py /dev/tty.usbmodemXXXX
 ```
+
+Full procedure, including what every telemetry line means and how to check the
+software without a board, is in
+[docs/operation_manual.md](docs/operation_manual.md).
 
 ## Train and export the model
 
@@ -124,5 +141,6 @@ against the float model before emitting anything.
 
 ## License
 
-Open source release planned after the contest submission. Intended as a reusable
-template for real time edge AI on constrained hardware.
+MIT, see [LICENSE](LICENSE). Vendored third party components keep their own
+licences, listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). Intended
+as a reusable template for real time edge AI on constrained hardware.

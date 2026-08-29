@@ -1,0 +1,138 @@
+# Introduction slides, content
+
+The contest requires slides introducing the program as a separate mandatory
+item. This is the content, slide by slide, with the measured numbers already in
+place. Every figure named here exists under `experiments/`.
+
+---
+
+**1. Title**
+
+RTOS-Coupled Adaptive Edge AI
+Real time co-optimisation of TinyML inference on µT-Kernel 3.0
+NUCLEO-H533RE, Cortex-M33 at 250 MHz. RTOS Application, Students.
+
+---
+
+**2. The problem**
+
+Deploying a model on a microcontroller means fixing every optimisation decision
+at compile time: window size, whether features run, numeric precision. The RTOS
+schedules the model but does not shape it.
+
+Both static choices are wrong somewhere. On this part FP32 misses the deadline
+and INT8 gives up accuracy headroom for nothing, and neither can express the
+configuration that is actually best.
+
+---
+
+**3. The idea**
+
+Make the kernel an active participant. µT-Kernel reads the DWT cycle counter and
+signal statistics, and reshapes how the model executes: capture window, feature
+gating, task priority, and per layer numeric precision. Five tasks, every link a
+native kernel primitive.
+
+*Figure: the five task graph with the primitive named on every edge.*
+
+---
+
+**4. The headline result**
+
+| Configuration | Latency | 120 ms deadline | Core idle |
+| :-- | --: | :-- | --: |
+| Static FP32 | 125.1 ms | missed | 23.5 percent |
+| Static INT8 | 101.5 ms | met | 39.9 percent |
+| **Adaptive** | **98.2 ms** | **met** | **40.1 percent** |
+
+The adaptive point is **faster than either static build**, not a compromise
+between them. The deadline is the classification period itself, derived from the
+inference stride, not chosen after seeing the costs.
+
+---
+
+**5. Why a mixed configuration wins**
+
+Measured on this silicon, per layer:
+
+* the four depthwise layers are about **45 percent slower in INT8** than FP32,
+  because their kernels are scalar while every other layer uses packed SMLAD
+* every other layer is faster in INT8
+
+So the cost optimum is mixed: depthwise at FP32, everything else INT8. **No
+single precision build can express it.**
+
+*Figure: per layer INT8 against FP32 cycles, the four depthwise bars inverted.*
+
+---
+
+**6. The kernel finds it by measuring, not by being told**
+
+T4 calibrates on its first two inferences, running both pure precisions and
+recording what every layer costs. T5 ranks layers by that measured delta and
+hill climbs on cost, so every accepted move strictly reduces the projection and
+the walk cannot cycle.
+
+* from all FP32: **6 demotions** to mask 0x0AA
+* restarted from all INT8: **4 promotions** back to the same mask
+* converges to the same point from both extremes
+
+*Figure: the decision trace, latency against inference index, deadline line and
+the moves marked.*
+
+---
+
+**7. Honesty, and what the measurements refuted**
+
+The program plan predicted INT8 would be three to four times faster from an ALU
+cycle count argument. The first hardware run measured it **28 percent slower**,
+because a scalar INT8 path pays a per element offset add and a 64 bit
+requantisation while FP32 rides the FPU. Folding the offsets and rewriting with
+packed SXTB16 and SMLAD, bit identical against the golden reference, brought it
+to 1.22 times faster. **The refutation is what produced the real result.**
+
+Also corrected: this part has no SMPS, so the power measurement point is the IDD
+jumper.
+
+---
+
+**8. The three characteristics the contest rewards**
+
+* **Real time.** Deadline derived from the application. Convergence transient
+  reported, including the deadline misses during it, rather than only the
+  settled average.
+* **Power.** The kernel idle hook was an empty function; it now sleeps. Core
+  measured asleep 40.1 percent of wall time adaptive against 23.5 percent FP32,
+  a factor of 1.71 on identical audio.
+* **Footprint.** 460 KB flash, 117 KB of 272 KB SRAM, per layer weight streaming
+  through `tk_get_mpl` with peak pool use of 16 KB measured.
+
+---
+
+**9. How correctness is established**
+
+The device is never the first implementation. A NumPy reference of exactly the
+device arithmetic is checked against the trained float model, then the real
+device C is compiled for the host and checked against that reference: transform
+to 1.4e-05, MFCC frame to 5.5e-06, inference logits to 5e-08. A hardware
+disagreement is therefore a hardware question, never an open one.
+
+---
+
+**10. What is not claimed**
+
+* Core accuracy 94.0 percent is measured on **pre computed feature grids**. End
+  to end accuracy, measured separately, is 47 to 57 percent and the
+  configurations are **not** statistically separable at this sample size.
+* Power is an **idle residency ratio**, not a wattage. No ammeter was used.
+* TrustZone from the plan is **cut**, and the deviation is documented.
+
+---
+
+**11. Reuse**
+
+The task graph and adaptation primitives are domain independent: the signal
+source is one interface with two implementations, and the pipeline above it does
+not know where samples come from. Open source, MIT.
+
+github.com/kushal-script/utkernel-rtos-adaptive-kws
