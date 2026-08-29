@@ -396,11 +396,22 @@ def main():
         emit_eval_set(eval_q, test_y[picks].astype(np.uint8), cfg)
     )
 
-    # The cache keeps a small number of raw test clips, indexed from zero, so
-    # the replay source can stream real audio rather than features.
-    if "test_raw" in blob:
-        raw = blob["test_raw"]
-        raw_y = blob["test_raw_y"]
+    # Prefer the stratified corpus from make_replay.py, which alternates
+    # keyword and silence so the voice activity gate is exercised in both
+    # directions. Fall back to the raw clips in the feature cache, which are in
+    # bucket order and therefore all one word.
+    replay_path = cache_dir / "replay_clips.npz"
+    if replay_path.exists():
+        clips = np.load(replay_path)
+        raw, raw_y = clips["waves"], clips["labels"]
+        print(f"replay corpus from {replay_path.name}, {len(raw)} clips")
+    elif "test_raw" in blob:
+        raw, raw_y = blob["test_raw"], blob["test_raw_y"]
+        print("replay corpus from the feature cache, unstratified")
+    else:
+        raw = None
+
+    if raw is not None:
         take = min(args.replay_clips, len(raw))
         (out_dir / "replay_data.h").write_text(emit_replay_header(take, cfg))
         (out_dir / "replay_data.c").write_text(

@@ -28,11 +28,19 @@ extern ID flgid_features;
 #define FLG_FEATURES_READY  (1u << 0)
 extern ID flgid_inference;
 
-/* T2 and T4 to T5, everything the controller reacts to. */
+/* T2 and T4 to T5, everything the controller reacts to.
+
+   FLG_ACTIVE matters as much as FLG_QUIESCENT. Without it the feature gate is a
+   one way latch: the gate closes on silence, T3 then skips every frame, so no
+   grid is ever completed, so no inference finishes, so the only events reaching
+   the controller are further quiescent ones, which keep the gate shut. The
+   pipeline would never restart when speech returned. */
 #define FLG_QUIESCENT       (1u << 0)
 #define FLG_INFERENCE_DONE  (1u << 1)
 #define FLG_BUDGET_EXCEEDED (1u << 2)
-#define FLG_CONTROL_ANY     (FLG_QUIESCENT | FLG_INFERENCE_DONE | FLG_BUDGET_EXCEEDED)
+#define FLG_ACTIVE          (1u << 3)
+#define FLG_CONTROL_ANY     (FLG_QUIESCENT | FLG_INFERENCE_DONE | \
+                             FLG_BUDGET_EXCEEDED | FLG_ACTIVE)
 extern ID flgid_control;
 
 /* T5 to T3, the feature gate. Only ever peeked with tk_ref_flg, never waited

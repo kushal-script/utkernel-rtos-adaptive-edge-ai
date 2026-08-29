@@ -1,0 +1,72 @@
+BENCH_BEGIN
+BENCH int8 mask=00000000 n=150 acc_ppm=940000 mean=26554759 worst=26588165 best=26530555 us=106219
+BENCH_LAYER int8 0 stem 6025528
+BENCH_LAYER int8 1 dw0 2251142
+BENCH_LAYER int8 2 pw0 2767235
+BENCH_LAYER int8 3 dw1 2685654
+BENCH_LAYER int8 4 pw1 2626474
+BENCH_LAYER int8 5 dw2 2350617
+BENCH_LAYER int8 6 pw2 2615547
+BENCH_LAYER int8 7 dw3 2386618
+BENCH_LAYER int8 8 pw3 2627910
+BENCH_LAYER int8 9 fc 3479
+BENCH fp32 mask=000003ff n=150 acc_ppm=940000 mean=31333712 worst=31334237 best=31333312 us=125334
+BENCH_LAYER fp32 0 stem 7453147
+BENCH_LAYER fp32 1 dw0 1555339
+BENCH_LAYER fp32 2 pw0 4237851
+BENCH_LAYER fp32 3 dw1 1555336
+BENCH_LAYER fp32 4 pw1 4237855
+BENCH_LAYER fp32 5 dw2 1555307
+BENCH_LAYER fp32 6 pw2 4237858
+BENCH_LAYER fp32 7 dw3 1608491
+BENCH_LAYER fp32 8 pw3 4238021
+BENCH_LAYER fp32 9 fc 4878
+BENCH adaptive mask=000000aa n=150 acc_ppm=940000 mean=25137423 worst=25164600 best=25115823 us=100549
+BENCH_LAYER adaptive 0 stem 6025550
+BENCH_LAYER adaptive 1 dw0 1555265
+BENCH_LAYER adaptive 2 pw0 2766989
+BENCH_LAYER adaptive 3 dw1 1555297
+BENCH_LAYER adaptive 4 pw1 2626415
+BENCH_LAYER adaptive 5 dw2 1555298
+BENCH_LAYER adaptive 6 pw2 2615533
+BENCH_LAYER adaptive 7 dw3 1608482
+BENCH_LAYER adaptive 8 pw3 2627887
+BENCH_LAYER adaptive 9 fc 3485
+BENCH_COST 0 stem int8=6177095 fp32=7461047 saving=1283952
+BENCH_COST 1 dw0 int8=2386721 fp32=1690901 saving=-695820
+BENCH_COST 2 pw0 int8=2771815 fp32=4372968 saving=1601153
+BENCH_COST 3 dw1 int8=2826755 fp32=1554635 saving=-1272120
+BENCH_COST 4 pw1 int8=2637511 fp32=4507925 saving=1870414
+BENCH_COST 5 dw2 int8=2348144 fp32=1554665 saving=-793479
+BENCH_COST 6 pw2 int8=2752315 fp32=4246757 saving=1494442
+BENCH_COST 7 dw3 int8=2525276 fp32=1607620 saving=-917656
+BENCH_COST 8 pw3 int8=2613939 fp32=4507924 saving=1893985
+BENCH_COST 9 fc int8=3471 fp32=4875 saving=1404
+BENCH_ESTIMATE int8=27043042 fp32=31509317 settled=23363967 mask=000000aa
+BENCH_TRACE 173 before=03ff after=02ff act=1 over=1 cycles=32286356 ewma=32286356
+BENCH_TRACE 174 before=02ff after=02ef act=1 over=1 cycles=32286356 ewma=32286356
+BENCH_TRACE 184 before=02ef after=02eb act=1 over=1 cycles=28965411 ewma=31871238
+BENCH_TRACE 205 before=02eb after=02ab act=1 over=0 cycles=28534022 ewma=31454086
+BENCH_TRACE 217 before=02ab after=02aa act=1 over=0 cycles=27308089 ewma=30935837
+BENCH_TRACE 229 before=02aa after=00aa act=1 over=0 cycles=25821524 ewma=30296548
+BENCH_TRACE 244 before=00aa after=00aa act=0 over=0 cycles=25844188 ewma=29740003
+BENCH_TRACE 260 before=00aa after=00aa act=0 over=0 cycles=25849635 ewma=29253707
+BENCH_TRACE 277 before=00aa after=00aa act=0 over=0 cycles=25853250 ewma=28828650
+BENCH_TRACE 296 before=00aa after=00aa act=0 over=0 cycles=25860436 ewma=28457623
+BENCH_TRACE 316 before=00aa after=0000 act=0 over=0 cycles=25736274 ewma=28117455
+BENCH_TRACE 341 before=0000 after=0008 act=2 over=0 cycles=27301429 ewma=28015452
+BENCH_TRACE 368 before=0008 after=0088 act=2 over=0 cycles=26666558 ewma=27846840
+BENCH_TRACE 402 before=0088 after=00a8 act=2 over=0 cycles=26387129 ewma=27664376
+BENCH_TRACE 442 before=00a8 after=00aa act=2 over=0 cycles=26093485 ewma=27468014
+BENCH_TRACE 483 before=00aa after=00aa act=0 over=0 cycles=25887549 ewma=27270456
+BENCH_TRACE 524 before=00aa after=00aa act=0 over=0 cycles=25887905 ewma=27097637
+BENCH_TRACE 565 before=00aa after=00aa act=0 over=0 cycles=25886686 ewma=26946268
+BENCH_TRACE 606 before=00aa after=00aa act=0 over=0 cycles=25891601 ewma=26814435
+BENCH_TRACE 647 before=00aa after=00aa act=0 over=0 cycles=25895385 ewma=26699554
+BENCH_STATE vad_threshold=40 noise_floor=5 blocks=627 active=537
+BENCH_CONTROL decisions=647 demote=6 promote=4 window=25 pri=1 ewma=26699554
+BENCH_CONVERGE converged=1 mask=000000aa at=647 misses=3 traced=20
+BENCH_PIPELINE inferences=19 scored=0 correct=0 overruns=1 frames=214 skipped=0 resyncs=2 capture_overruns=12538
+BENCH_CAPTURE waited_ms=4200 blocks=627 rate_mhz=149 expected_mhz=250000 window=64 overruns=12541
+BENCH_MEMORY peak_pool_bytes=16384 pool_capacity=20480
+BENCH_END

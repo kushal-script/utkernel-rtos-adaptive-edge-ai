@@ -69,8 +69,18 @@ void bench_task(INT stacd, void *exinf)
     (void)stacd;
     (void)exinf;
 
-    /* Let the pipeline settle so the benchmark is not competing with startup. */
-    tk_dly_tsk(2000);
+    /* Wait for the controller to settle rather than for a fixed delay, so the
+       benchmark always describes a converged operating point. The elapsed time
+       and the block count together give the capture rate, which is the check
+       that the timer is really pacing the DMA. */
+    uint32_t blocks_at_start = signal_source_block_count();
+    uint32_t waited_ms = 0;
+    while (!t5_stats.converged && waited_ms < BENCH_SETTLE_MAX_MS) {
+        tk_dly_tsk(100);
+        waited_ms += 100;
+    }
+    uint32_t blocks_seen_total = signal_source_block_count() - blocks_at_start;
+    uint32_t block_rate_mhz = waited_ms ? (blocks_seen_total * 1000u) / waited_ms : 0;
 
     /* The inference core keeps its activation arenas in static storage, so it
        is single instance. Suspending the pipeline for the duration is both what
@@ -149,6 +159,12 @@ void bench_task(INT stacd, void *exinf)
               (unsigned)t4_stats.correct, (unsigned)t4_stats.overruns,
               (unsigned)t3_stats.frames_computed, (unsigned)t3_stats.frames_skipped,
               (unsigned)t3_stats.resyncs, (unsigned)signal_source_overruns());
+    tm_printf((UB *)"BENCH_CAPTURE waited_ms=%u blocks=%u rate_mhz=%u expected_mhz=%u window=%u overruns=%u\n",
+              (unsigned)waited_ms, (unsigned)blocks_seen_total,
+              (unsigned)block_rate_mhz,
+              (unsigned)((SAMPLE_RATE_HZ * 1000u) / adapt_state.window_samples),
+              (unsigned)adapt_state.window_samples,
+              (unsigned)signal_source_overruns());
     tm_printf((UB *)"BENCH_MEMORY peak_pool_bytes=%u pool_capacity=%u\n",
               (unsigned)t4_stats.peak_pool_bytes, (unsigned)KWS_LAYER_POOL_BYTES);
     tm_putstring((UB *)"BENCH_END\n");

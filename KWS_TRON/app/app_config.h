@@ -110,7 +110,12 @@
 /* Reporting over UART costs cycles, so the benchmark harness collects into RAM
    during a run and prints afterwards. Never print from inside a timed region. */
 #define BENCH_ENABLE         1
-#define BENCH_HISTORY        64     /* inferences retained per run */
+#define BENCH_HISTORY        64     /* controller decisions retained */
+
+/* Longest the benchmark waits for the controller to converge before measuring
+   anyway. Waiting for convergence rather than a fixed delay is what keeps the
+   reported operating point a settled one. */
+#define BENCH_SETTLE_MAX_MS  60000u
 
 /* Bring up probe for a live microphone, off for normal builds. */
 #define KWS_AUDIO_PROBE      0

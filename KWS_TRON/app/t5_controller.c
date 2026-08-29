@@ -176,6 +176,9 @@ void t5_controller_task(INT stacd, void *exinf)
             continue;
         }
 
+        /* Any non quiescent event means the signal is live again, so the gate
+           reopens immediately rather than waiting for an inference that cannot
+           happen while it is shut. */
         quiet_run = 0;
         set_feature_gate(false);
 

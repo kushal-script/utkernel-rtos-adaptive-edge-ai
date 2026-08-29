@@ -102,6 +102,9 @@ void t2_variance_task(INT stacd, void *exinf)
         if (active) {
             t2_stats.blocks_active++;
             tk_set_flg(flgid_features, FLG_VOICE_ACTIVE);
+            /* The controller is told about speech as well as silence, which is
+               what lets it reopen the gate it closed. */
+            tk_set_flg(flgid_control, FLG_ACTIVE);
         } else {
             tk_set_flg(flgid_control, FLG_QUIESCENT);
         }

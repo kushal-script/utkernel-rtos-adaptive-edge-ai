@@ -1,0 +1,18 @@
+{
+  "args": {
+    "checkpoint": "../experiments/2026-08-22_071116_dscnn-kws-baseline/checkpoint.pt",
+    "out_dir": "KWS_TRON/audio",
+    "cache": "model/datasets/cache",
+    "replay_clips": 6,
+    "eval_samples": 150,
+    "verify_samples": 6,
+    "calib_samples": 512
+  },
+  "sizes": {
+    "int8_bytes": 24368,
+    "fp32_bytes": 90416,
+    "requant_bytes": 4704,
+    "total_bytes": 119488,
+    "eval_bytes": 73500
+  }
+}
