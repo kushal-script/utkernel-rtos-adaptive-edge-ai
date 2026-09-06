@@ -260,6 +260,11 @@ static int cmd_run(const options_t *opt)
                 printf("  decision %-5u %s -> %s  %s\n",
                        (unsigned)e->decision, before, after,
                        e->mask_before == e->mask_after ? "settled" : "moved");
+                /* Flushed because a trace is worth watching as it happens, and
+                   stdout is fully buffered whenever it is not a terminal, so a
+                   redirected or piped run would otherwise show nothing until
+                   the process exits. */
+                fflush(stdout);
             }
         }
         ukernel_request_stop();

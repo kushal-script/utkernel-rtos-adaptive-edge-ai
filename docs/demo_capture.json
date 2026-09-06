@@ -1,0 +1,458 @@
+{
+ "command": "/Users/kushalsathyanarayan/Desktop/TRON/build/desktop/kws-desktop run --seconds 14 --trace",
+ "rows": [
+  {
+   "t": 0.002,
+   "line": "T1: capture running, window 256 samples"
+  },
+  {
+   "t": 2.602,
+   "line": "Running the five task pipeline for 14 s."
+  },
+  {
+   "t": 2.602,
+   "line": "Capture, gate, features, inference and the controller are live."
+  },
+  {
+   "t": 2.602,
+   "line": "  decision 160   FFFFFFFFFF -> FFFFFiFFFF  moved"
+  },
+  {
+   "t": 2.602,
+   "line": "  decision 161   FFFFFiFFFF -> FiFFFiFFFF  moved"
+  },
+  {
+   "t": 2.706,
+   "line": "  decision 169   FiFFFiFFFF -> FiFFFiFFFi  moved"
+  },
+  {
+   "t": 2.813,
+   "line": "  decision 178   FiFFFiFFFi -> FiFFFiFiFi  moved"
+  },
+  {
+   "t": 3.136,
+   "line": "  decision 200   FiFFFiFiFi -> FiFiFiFiFi  moved"
+  },
+  {
+   "t": 3.24,
+   "line": "  decision 208   FiFiFiFiFi -> iiFiFiFiFi  moved"
+  },
+  {
+   "t": 3.401,
+   "line": "  decision 217   iiFiFiFiFi -> iiFiFiFiFi  settled"
+  },
+  {
+   "t": 3.506,
+   "line": "  decision 225   iiFiFiFiFi -> iiFiFiFiFi  settled"
+  },
+  {
+   "t": 3.665,
+   "line": "  decision 234   iiFiFiFiFi -> iiFiFiFiFi  settled"
+  },
+  {
+   "t": 3.775,
+   "line": "  decision 243   iiFiFiFiFi -> iiFiFiFiFi  settled"
+  },
+  {
+   "t": 3.881,
+   "line": "  decision 252   iiFiFiFiFi -> iiiiiiiiii  moved"
+  },
+  {
+   "t": 3.99,
+   "line": "  decision 261   iiiiiiiiii -> iiiiiiFiii  moved"
+  },
+  {
+   "t": 4.1,
+   "line": "  decision 270   iiiiiiFiii -> iiiiFiFiii  moved"
+  },
+  {
+   "t": 4.259,
+   "line": "  decision 279   iiiiFiFiii -> iiFiFiFiii  moved"
+  },
+  {
+   "t": 4.369,
+   "line": "  decision 288   iiFiFiFiii -> iiFiFiFiFi  moved"
+  },
+  {
+   "t": 4.475,
+   "line": "  decision 297   iiFiFiFiFi -> iiFiFiFiFi  settled"
+  },
+  {
+   "t": 4.636,
+   "line": "  decision 307   iiFiFiFiFi -> iiFiFiFiFi  settled"
+  },
+  {
+   "t": 4.745,
+   "line": "  decision 316   iiFiFiFiFi -> iiFiFiFiFi  settled"
+  },
+  {
+   "t": 4.852,
+   "line": "  decision 326   iiFiFiFiFi -> iiFiFiFiFi  settled"
+  },
+  {
+   "t": 4.957,
+   "line": "  decision 335   iiFiFiFiFi -> iiFiFiFiFi  settled"
+  },
+  {
+   "t": 5.119,
+   "line": "  decision 345   iiFiFiFiFi -> iiFiFiFiFi  settled"
+  },
+  {
+   "t": 5.225,
+   "line": "  decision 355   iiFiFiFiFi -> iiFiFiFiFi  settled"
+  },
+  {
+   "t": 5.331,
+   "line": "  decision 364   iiFiFiFiFi -> iiFiFiFiFi  settled"
+  },
+  {
+   "t": 5.487,
+   "line": "  decision 374   iiFiFiFiFi -> iiFiFiFiFi  settled"
+  },
+  {
+   "t": 5.592,
+   "line": "  decision 384   iiFiFiFiFi -> iiFiFiFiFi  settled"
+  },
+  {
+   "t": 5.702,
+   "line": "  decision 394   iiFiFiFiFi -> iiFiFiFiFi  settled"
+  },
+  {
+   "t": 5.812,
+   "line": "  decision 404   iiFiFiFiFi -> iiFiFiFiFi  settled"
+  },
+  {
+   "t": 5.967,
+   "line": "  decision 415   iiFiFiFiFi -> iiFiFiFiFi  settled"
+  },
+  {
+   "t": 6.073,
+   "line": "  decision 425   iiFiFiFiFi -> iiFiFiFiFi  settled"
+  },
+  {
+   "t": 6.181,
+   "line": "  decision 435   iiFiFiFiFi -> iiFiFiFiFi  settled"
+  },
+  {
+   "t": 6.342,
+   "line": "  decision 445   iiFiFiFiFi -> iiFiFiFiFi  settled"
+  },
+  {
+   "t": 6.503,
+   "line": "  decision 458   iiFiFiFiFi -> iiFiFiFiFi  settled"
+  },
+  {
+   "t": 6.612,
+   "line": "  decision 468   iiFiFiFiFi -> iiFiFiFiFi  settled"
+  },
+  {
+   "t": 6.722,
+   "line": "  decision 478   iiFiFiFiFi -> iiFiFiFiFi  settled"
+  },
+  {
+   "t": 6.878,
+   "line": "  decision 488   iiFiFiFiFi -> iiFiFiFiFi  settled"
+  },
+  {
+   "t": 6.984,
+   "line": "  decision 498   iiFiFiFiFi -> iiFiFiFiFi  settled"
+  },
+  {
+   "t": 7.093,
+   "line": "  decision 509   iiFiFiFiFi -> iiFiFiFiFi  settled"
+  },
+  {
+   "t": 8.588,
+   "line": "  decision 599   iiFiFiFiFi -> iiFiFiFiFi  settled"
+  },
+  {
+   "t": 8.698,
+   "line": "  decision 607   iiFiFiFiFi -> iiFiFiFiFi  settled"
+  },
+  {
+   "t": 8.802,
+   "line": "  decision 616   iiFiFiFiFi -> iiFiFiFiFi  settled"
+  },
+  {
+   "t": 9.121,
+   "line": "  decision 635   iiFiFiFiFi -> iiFiFiFiFi  settled"
+  },
+  {
+   "t": 9.278,
+   "line": "  decision 644   iiFiFiFiFi -> iiFiFiFiFi  settled"
+  },
+  {
+   "t": 9.381,
+   "line": "  decision 652   iiFiFiFiFi -> iiFiFiFiFi  settled"
+  },
+  {
+   "t": 9.488,
+   "line": "  decision 661   iiFiFiFiFi -> iiFiFiFiFi  settled"
+  },
+  {
+   "t": 9.594,
+   "line": "  decision 669   iiFiFiFiFi -> iiFiFiFiFi  settled"
+  },
+  {
+   "t": 9.754,
+   "line": "  decision 678   iiFiFiFiFi -> iiFiFiFiFi  settled"
+  },
+  {
+   "t": 9.858,
+   "line": "  decision 686   iiFiFiFiFi -> iiFiFiFiFi  settled"
+  },
+  {
+   "t": 9.964,
+   "line": "  decision 695   iiFiFiFiFi -> iiFiFiFiFi  settled"
+  },
+  {
+   "t": 10.126,
+   "line": "  decision 704   iiFiFiFiFi -> iiFiFiFiFi  settled"
+  },
+  {
+   "t": 10.231,
+   "line": "  decision 713   iiFiFiFiFi -> iiFiFiFiFi  settled"
+  },
+  {
+   "t": 10.336,
+   "line": "  decision 722   iiFiFiFiFi -> iiFiFiFiFi  settled"
+  },
+  {
+   "t": 10.498,
+   "line": "  decision 731   iiFiFiFiFi -> iiFiFiFiFi  settled"
+  },
+  {
+   "t": 10.607,
+   "line": "  decision 740   iiFiFiFiFi -> iiFiFiFiFi  settled"
+  },
+  {
+   "t": 10.714,
+   "line": "  decision 749   iiFiFiFiFi -> iiFiFiFiFi  settled"
+  },
+  {
+   "t": 10.823,
+   "line": "  decision 758   iiFiFiFiFi -> iiFiFiFiFi  settled"
+  },
+  {
+   "t": 10.986,
+   "line": "  decision 767   iiFiFiFiFi -> iiFiFiFiFi  settled"
+  },
+  {
+   "t": 11.095,
+   "line": "  decision 776   iiFiFiFiFi -> iiFiFiFiFi  settled"
+  },
+  {
+   "t": 11.199,
+   "line": "  decision 786   iiFiFiFiFi -> iiFiFiFiFi  settled"
+  },
+  {
+   "t": 11.357,
+   "line": "  decision 796   iiFiFiFiFi -> iiFiFiFiFi  settled"
+  },
+  {
+   "t": 11.466,
+   "line": "  decision 805   iiFiFiFiFi -> iiFiFiFiFi  settled"
+  },
+  {
+   "t": 11.572,
+   "line": "  decision 815   iiFiFiFiFi -> iiFiFiFiFi  settled"
+  },
+  {
+   "t": 11.681,
+   "line": "  decision 824   iiFiFiFiFi -> iiFiFiFiFi  settled"
+  },
+  {
+   "t": 11.84,
+   "line": "  decision 834   iiFiFiFiFi -> iiFiFiFiFi  settled"
+  },
+  {
+   "t": 11.948,
+   "line": "  decision 843   iiFiFiFiFi -> iiFiFiFiFi  settled"
+  },
+  {
+   "t": 14.085,
+   "line": ""
+  },
+  {
+   "t": 14.085,
+   "line": "Capture"
+  },
+  {
+   "t": 14.085,
+   "line": "  Source        built in replay corpus, 6 clips of 16000 samples"
+  },
+  {
+   "t": 14.085,
+   "line": "  Blocks        918 captured, 1 overruns, window 256 samples"
+  },
+  {
+   "t": 14.085,
+   "line": ""
+  },
+  {
+   "t": 14.085,
+   "line": "Gate, T2"
+  },
+  {
+   "t": 14.085,
+   "line": "  Blocks        918 seen, 672 passed the gate"
+  },
+  {
+   "t": 14.085,
+   "line": "  Noise floor   5, gate threshold 40"
+  },
+  {
+   "t": 14.085,
+   "line": ""
+  },
+  {
+   "t": 14.085,
+   "line": "Features, T3"
+  },
+  {
+   "t": 14.085,
+   "line": "  Frames        488 computed, 0 skipped by the gate"
+  },
+  {
+   "t": 14.085,
+   "line": "  Grids         74 queued, 0 restarted, 6 resyncs"
+  },
+  {
+   "t": 14.085,
+   "line": ""
+  },
+  {
+   "t": 14.085,
+   "line": "Inference, T4"
+  },
+  {
+   "t": 14.085,
+   "line": "  Inferences    72, peak layer pool 16384 of 20480 bytes"
+  },
+  {
+   "t": 14.085,
+   "line": "  Last result   down"
+  },
+  {
+   "t": 14.085,
+   "line": "  Scored        16 of 32 correct end to end, 50 percent"
+  },
+  {
+   "t": 14.085,
+   "line": "                This is one short run across every mask the"
+  },
+  {
+   "t": 14.085,
+   "line": "                controller visited, not a per configuration"
+  },
+  {
+   "t": 14.085,
+   "line": "                figure. The board's pinned thirty second"
+  },
+  {
+   "t": 14.085,
+   "line": "                windows give 47 to 57 percent with the three"
+  },
+  {
+   "t": 14.085,
+   "line": "                configurations not separable, see README.md."
+  },
+  {
+   "t": 14.085,
+   "line": ""
+  },
+  {
+   "t": 14.085,
+   "line": "Controller, T5"
+  },
+  {
+   "t": 14.085,
+   "line": "  Decisions     991, 6 demotions, 4 promotions"
+  },
+  {
+   "t": 14.085,
+   "line": "  Levers        68 window resizes by mailbox, 1 priority raises"
+  },
+  {
+   "t": 14.085,
+   "line": "  Precision     iiFiFiFiFi  (mask 0aa, high bit is layer 9)"
+  },
+  {
+   "t": 14.085,
+   "line": "  Converged     yes, at decision 335"
+  },
+  {
+   "t": 14.085,
+   "line": "  Model cost    21951222 cycles for this mask by the replayed table."
+  },
+  {
+   "t": 14.085,
+   "line": "                This ranks masks against each other. It is not a"
+  },
+  {
+   "t": 14.085,
+   "line": "                latency: it excludes the conversions inserted"
+  },
+  {
+   "t": 14.085,
+   "line": "                between layers of different precision and carries"
+  },
+  {
+   "t": 14.085,
+   "line": "                the calibration probe's own overhead, so it neither"
+  },
+  {
+   "t": 14.085,
+   "line": "                matches nor bounds what the board measures end to"
+  },
+  {
+   "t": 14.085,
+   "line": "                end. Those measured latencies, and the 120 ms"
+  },
+  {
+   "t": 14.085,
+   "line": "                deadline they are judged against, are in README.md."
+  },
+  {
+   "t": 14.085,
+   "line": "  Ran for       14 s of wall clock"
+  },
+  {
+   "t": 14.085,
+   "line": ""
+  },
+  {
+   "t": 14.085,
+   "line": "Provenance"
+  },
+  {
+   "t": 14.085,
+   "line": "  Pipeline      the five task sources from KWS_TRON/app, unmodified"
+  },
+  {
+   "t": 14.085,
+   "line": "  Cycle costs   replayed from experiments/2026-09-06_220415_hardware-requantise-ub-fixed (built in)"
+  },
+  {
+   "t": 14.085,
+   "line": "  Not measured  every cycle and millisecond figure above is the"
+  },
+  {
+   "t": 14.085,
+   "line": "                board's, replayed. This machine's own speed appears"
+  },
+  {
+   "t": 14.085,
+   "line": "                nowhere, and no power figure is produced at all,"
+  },
+  {
+   "t": 14.085,
+   "line": "                because a desktop has no equivalent of the idle"
+  },
+  {
+   "t": 14.085,
+   "line": "                residency the board reports."
+  }
+ ],
+ "total_s": 14.09
+}

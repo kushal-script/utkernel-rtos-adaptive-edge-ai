@@ -118,6 +118,9 @@ behind the same interface for when a live demonstration is wanted. See
 * [Roadmap](docs/roadmap.md), milestones and what each still owes
 * [Introduction slides](docs/TRON2026_intro_slides.pptx), the contest deck, with
   its content and rebuild steps in [slides_outline.md](docs/slides_outline.md)
+* [Demo video](docs/demo_converge.mp4), the controller converging, rebuilt from
+  a timed capture of a real run by `tools/capture_demo_run.py` and
+  `tools/make_demo_video.py`
 
 ## Build and run
 
