@@ -94,6 +94,7 @@ behind the same interface for when a live demonstration is wanted. See
 | `KWS_TRON/audio/` | Transform, layer kernels, inference core, generated model |
 | `KWS_TRON/benchmark/` | Cycle counter and the on device benchmark |
 | `KWS_TRON/mtk3/` | Vendored µT-Kernel 3.0 BSP2 |
+| `desktop/` | The same five tasks on macOS, Linux and Windows, no board needed |
 | `model/kws/` | Training, quantisation, export, and the golden reference |
 | `docs/` | Design and rationale |
 | `experiments/` | Timestamped runs, every number traces back to one |
@@ -110,6 +111,8 @@ behind the same interface for when a live demonstration is wanted. See
 * [Benchmarking](docs/benchmarking.md), how the numbers are produced
 * [Power](docs/power.md), the mechanism, the measurement, and what is not claimed
 * [Operation manual](docs/operation_manual.md), build, flash, and reproduce
+* [Desktop program](desktop/README.md), the pipeline without a board, and the
+  limits of what a host run can claim
 * [Roadmap](docs/roadmap.md), milestones and what each still owes
 * [Introduction slides](docs/TRON2026_intro_slides.pptx), the contest deck, with
   its content and rebuild steps in [slides_outline.md](docs/slides_outline.md)
@@ -130,6 +133,23 @@ python tools/parse_bench.py /dev/tty.usbmodemXXXX
 Full procedure, including what every telemetry line means and how to check the
 software without a board, is in
 [docs/operation_manual.md](docs/operation_manual.md).
+
+## Run it without a board at all
+
+The same five tasks run on macOS, Linux and Windows, from the same sources, on a
+host implementation of the µT-Kernel primitives:
+
+```
+cmake -S desktop -B build/desktop -DCMAKE_BUILD_TYPE=Release
+cmake --build build/desktop
+./build/desktop/kws-desktop converge
+```
+
+The controller settles on the same mixed precision mask it settles on in
+hardware, from both extremes, because it ranks its moves against the per layer
+costs recorded on the board rather than anything this machine can time. What a
+desktop run may and may not claim is set out in [desktop/README.md](desktop/README.md),
+including why no power figure is produced there.
 
 ## Train and export the model
 

@@ -92,7 +92,32 @@ Compiles the real device C with the host compiler and checks the transform, the
 MFCC frame path, and the inference core against the NumPy reference the model
 was trained against. Run it after touching anything in `KWS_TRON/audio/`.
 
-## 6. Retrain and regenerate, optional
+## 6. Run the whole pipeline without a board
+
+The five tasks also run on macOS, Linux and Windows, from the same sources,
+against a host implementation of the µT-Kernel primitives:
+
+```bash
+cmake -S desktop -B build/desktop -DCMAKE_BUILD_TYPE=Release
+cmake --build build/desktop
+./build/desktop/kws-desktop verify
+./build/desktop/kws-desktop converge
+./build/desktop/kws-desktop run --seconds 30
+```
+
+`verify` scores the inference core at 94.0 percent under every precision
+configuration, the same figure the board reports. `converge` shows the
+controller reaching the same mixed precision mask from both extremes. `run`
+exercises capture, the gate, features, inference and the controller together and
+reports the kernel primitives each one used.
+
+Per layer cycle costs there are replayed from a recorded device capture, because
+the asymmetry the controller exploits is a property of the Cortex-M33 that no
+desktop reproduces, and no power figure is produced at all. Both limits, and the
+rest of what a host run may and may not claim, are stated in
+[desktop/README.md](../desktop/README.md).
+
+## 7. Retrain and regenerate, optional
 
 Only needed to change the model or the corpus.
 
