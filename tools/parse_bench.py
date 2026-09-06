@@ -34,18 +34,23 @@ LIVE_RE = re.compile(
 )
 
 
-def read_serial(port: str, baud: int = 115200, timeout: float = 120.0) -> str:
+def read_serial(port: str, baud: int = 115200, timeout: float = 120.0,
+                idle_limit: float = 90.0) -> str:
     import serial
 
     lines = []
     started = False
     with serial.Serial(port, baud, timeout=1) as handle:
         print(f"listening on {port} for BENCH_BEGIN, up to {timeout:.0f} s")
-        deadline = timeout
-        while deadline > 0:
+        # Two separate allowances. The first waits for the run to start, the
+        # second bounds the silence between lines once it has. They must not be
+        # one budget: a live window is thirty seconds of deliberate quiet, so a
+        # single countdown expires part way through the report and truncates it.
+        quiet = timeout
+        while quiet > 0:
             raw = handle.readline()
             if not raw:
-                deadline -= 1
+                quiet -= 1
                 continue
             text = raw.decode("utf-8", errors="replace").rstrip()
             if "BENCH_BEGIN" in text:
@@ -53,8 +58,15 @@ def read_serial(port: str, baud: int = 115200, timeout: float = 120.0) -> str:
             if started:
                 lines.append(text)
                 print(" ", text)
+                quiet = idle_limit
             if "BENCH_END" in text:
                 break
+        else:
+            if started:
+                print(f"warning: no output for {idle_limit:.0f} s and no "
+                      f"BENCH_END, the capture below is incomplete")
+            else:
+                print(f"warning: no BENCH_BEGIN within {timeout:.0f} s")
     return "\n".join(lines)
 
 

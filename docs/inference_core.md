@@ -134,7 +134,9 @@ add per element and a 64 bit requantisation while FP32 rides the FPU. Folding
 the input offset into precomputed per channel accumulators and running the
 contiguous layers as packed SXTB16 and SMLAD pairs, bit identical arithmetic
 checked against the golden reference, brought INT8 to 102.6 against FP32's
-125.1 ms, a measured 1.22 times advantage. The depthwise layers remain scalar,
+125.1 ms in that run, a measured 1.22 times advantage. Those are the figures of
+the run that established the mechanism; the current build measures 99.3 against
+126.0 ms, a 1.27 times advantage, see the README. The depthwise layers remain scalar,
 their samples are not contiguous, and they are the obvious next target.
 
 One more measured truth: a precision boundary conversion is real work, roughly

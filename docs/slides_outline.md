@@ -12,8 +12,8 @@ python tools/make_slide_figures.py     # docs/figures from the raw device captur
 node tools/build_slides.js             # docs/TRON2026_intro_slides.pptx
 ```
 
-`make_slide_figures.py` reads the raw capture of the path independence run under
-`experiments/` and writes `layer_inversion.png` and `convergence.png`. The deck
+`make_slide_figures.py` reads the newest raw capture under `experiments/` that
+carries a cost table and a decision trace, and writes `layer_inversion.png` and `convergence.png`. The deck
 embeds those two, so a slide can never drift from the run it came from: change
 the run, rerun both commands, and the figures follow.
 
@@ -61,9 +61,9 @@ native kernel primitive.
 
 | Configuration | Latency | 120 ms deadline | Core idle |
 | :-- | --: | :-- | --: |
-| Static FP32 | 125.9 ms | missed | 23.5 percent |
-| Static INT8 | 101.5 ms | met | 39.9 percent |
-| **Adaptive** | **98.2 ms** | **met** | **42.0 percent** |
+| Static FP32 | 126.0 ms | missed | 23.5 percent |
+| Static INT8 | 99.3 ms | met | 41.0 percent |
+| **Adaptive** | **95.9 ms** | **met** | **43.3 percent** |
 
 The adaptive point is **faster than either static build**, not a compromise
 between them. The deadline is the classification period itself, derived from the
@@ -75,10 +75,10 @@ inference stride, not chosen after seeing the costs.
 
 Measured on this silicon, per layer:
 
-* the four depthwise layers are together **57 percent slower in INT8** than in
-  FP32, between 41 and 82 percent depending on the layer, because their samples
+* the four depthwise layers are together **43 percent slower in INT8** than in
+  FP32, between 37 and 45 percent depending on the layer, because their samples
   are not contiguous and their kernels are still scalar
-* every other layer is **32 percent faster in INT8**, running packed SXTB16 and
+* every other layer is **38 percent faster in INT8**, running packed SXTB16 and
   SMLAD pairs
 * the fully connected layer is a few thousand cycles either way, invisible next
   to the rest
@@ -126,8 +126,8 @@ jumper.
   reported, including the deadline misses during it, rather than only the
   settled average.
 * **Power.** The kernel idle hook was an empty function; it now sleeps. Core
-  measured asleep 42.0 percent of wall time adaptive against 23.5 percent FP32,
-  a factor of 1.79 on identical audio, and above static INT8 at 39.9 percent.
+  measured asleep 43.3 percent of wall time adaptive against 23.5 percent FP32,
+  a factor of 1.84 on identical audio, and above static INT8 at 41.0 percent.
 * **Footprint.** 460 KB flash, 117 KB of 272 KB SRAM, per layer weight streaming
   through `tk_get_mpl` with peak pool use of 16 KB measured.
 

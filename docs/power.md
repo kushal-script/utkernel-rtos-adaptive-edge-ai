@@ -51,11 +51,11 @@ same replayed audio for the same wall time, the comparison is like for like.
 | Configuration | Core idle | Relative to FP32 |
 | :-- | --: | --: |
 | Static FP32 | 23.5 percent | 1.00 |
-| Static INT8 | 39.9 percent | 1.70 |
-| Adaptive | 42.0 percent | 1.79 |
+| Static INT8 | 41.0 percent | 1.74 |
+| Adaptive | 43.3 percent | 1.84 |
 
 Thirty second windows, identical corpus, whole pipeline running. The adaptive
-configuration leaves the core asleep **1.79 times as long** as static FP32, and
+configuration leaves the core asleep **1.84 times as long** as static FP32, and
 longer than static INT8 as well, which is the point: the mixed mask does less
 work per classification than either pure build.
 

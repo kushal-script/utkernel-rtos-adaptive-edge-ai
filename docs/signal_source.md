@@ -105,7 +105,7 @@ The second was the pacing itself. It is real: the block rate scales with the
 window as the timer dictates and sits orders of magnitude below what a free
 running channel would produce, and the capture overrun count reads zero across
 the live windows of the final run, see
-`experiments/2026-08-30_003716_hardware-mask-divergence-fixed`. The reported
+`experiments/2026-09-06_220415_hardware-requantise-ub-fixed`. The reported
 rate can sit above the expectation printed beside it, because the expectation
 is computed from the window size at print time while the controller resizes
 the window during the measurement.

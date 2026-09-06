@@ -18,9 +18,9 @@ with knowledge of the measured costs:
 
 | Configuration | Latency | 120 ms deadline | Core accuracy | Core idle |
 | :-- | --: | :-- | --: | --: |
-| FP32 static | 125.9 ms | missed | 94.0 percent | 23.5 percent |
-| INT8 static | 101.5 ms | met | 94.0 percent | 39.9 percent |
-| **Adaptive** | **98.2 ms** | **met** | **94.0 percent** | **42.0 percent** |
+| FP32 static | 126.0 ms | missed | 94.0 percent | 23.5 percent |
+| INT8 static | 99.3 ms | met | 94.0 percent | 41.0 percent |
+| **Adaptive** | **95.9 ms** | **met** | **94.0 percent** | **43.3 percent** |
 
 The adaptive point is faster than the best static compile, not a compromise
 between the two. It is a mixed precision mask no single precision build can
@@ -29,7 +29,7 @@ express, and the controller finds it from measurements it takes itself.
 The controller calibrates on its first two inferences, measuring what every
 layer costs in each precision on this silicon, then ranks layers by that
 measurement rather than by index. On this part the four depthwise layers are
-together 57 percent slower in INT8, between 41 and 82 percent depending on the
+together 43 percent slower in INT8, between 37 and 45 percent depending on the
 layer, because their kernels are scalar while every
 other layer uses packed multiply accumulate, so the cost optimum is mixed. From
 full FP32 the controller reaches it in six cost reducing demotions; restarted
@@ -51,8 +51,8 @@ Power now has a mechanism as well as a number. The kernel idle hook shipped as
 an empty function, so the idle task spun at 250 MHz and no amount of gating work
 upstream could ever show up as power. It now sleeps, and with all three
 configurations driving the whole pipeline over identical thirty second windows
-the core is asleep 42.0 percent of the time adaptive against 23.5 percent for
-static FP32, a factor of **1.79**, and above static INT8's 39.9 percent. That ratio is the claim; it is deliberately
+the core is asleep 43.3 percent of the time adaptive against 23.5 percent for
+static FP32, a factor of **1.84**, and above static INT8's 41.0 percent. That ratio is the claim; it is deliberately
 not converted to milliwatts, and [docs/power.md](docs/power.md) explains why.
 
 The capture chain drops nothing. Earlier reports of thousands of dropped blocks
@@ -68,7 +68,7 @@ producing; with the producer paused too, the live phase overrun count is zero.
 | INT8 kernels | Packed SMLAD with folded offsets, 1.22 times faster than FP32 |
 | Adaptation controller | Converges to the same mask from both extremes, beats every static build |
 | Trained model | 92.8 percent on twelve class Speech Commands, 23,180 parameters |
-| Power | Idle sleep implemented, adaptive leaves the core asleep 1.79 times as long as FP32 |
+| Power | Idle sleep implemented, adaptive leaves the core asleep 1.84 times as long as FP32 |
 | Capture | Zero dropped blocks over a live run, block rate matches the timer pacing |
 
 ## The signal source, and why there is no microphone in the loop

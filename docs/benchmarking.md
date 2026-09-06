@@ -23,7 +23,7 @@ through one was wrong.
 
 The mechanism now exists: the kernel idle hook sleeps rather than spinning, and
 with the whole pipeline live over identical thirty second windows the core is
-asleep 42.0 percent of wall time in the adaptive configuration against 39.9 for
+asleep 43.3 percent of wall time in the adaptive configuration against 41.0 for
 static INT8 and 23.5 for static FP32. Average current itself still needs a
 meter. See [power.md](power.md).
 

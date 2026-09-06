@@ -152,7 +152,7 @@ void dwt_log_layer(uint8_t layer_id, uint32_t cycles)
 
 /* The board measures idle residency by counting cycles spent in WFI. A host has
    no equivalent, and a desktop scheduler idle figure has no relationship to the
-   published 23.5, 39.9 and 42.0 percent, so nothing is reported rather than
+   published 23.5, 41.0 and 43.3 percent, so nothing is reported rather than
    something that would be read as comparable. */
 uint64_t bsp_idle_cycles(void)
 {

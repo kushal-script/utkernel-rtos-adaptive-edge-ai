@@ -91,15 +91,15 @@ weakening it. See [novelty.md](novelty.md).
 
 ## Current position
 
-The pipeline runs on the board and the headline result is measured: FP32 125.9
-ms, INT8 101.5 ms, adaptive 98.2 ms, the adaptive point faster than either pure
+The pipeline runs on the board and the headline result is measured: FP32 126.0
+ms, INT8 99.3 ms, adaptive 95.9 ms, the adaptive point faster than either pure
 build because the cost optimum on this silicon is mixed. The controller reaches
 the same mask from both extremes, six demotions from FP32 and four promotions
 from INT8. The gate closes and reopens on a corpus that contains silence, the
 window is regulated against measured capture overruns, and the idle hook
-sleeps: with the whole pipeline live the core is asleep 42.0 percent of wall
+sleeps: with the whole pipeline live the core is asleep 43.3 percent of wall
 time in the adaptive configuration against 23.5 for static FP32, a factor of
-1.79.
+1.84.
 
 The introduction slides are built, see
 [TRON2026_intro_slides.pptx](TRON2026_intro_slides.pptx) and the content in

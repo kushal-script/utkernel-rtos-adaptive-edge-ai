@@ -4,7 +4,7 @@
 #include <string.h>
 
 #define BUILTIN_SOURCE \
-    "experiments/2026-08-30_003716_hardware-mask-divergence-fixed (built in)"
+    "experiments/2026-09-06_220415_hardware-requantise-ub-fixed (built in)"
 
 #define COST_PREFIX     "BENCH_COST "
 #define COST_PREFIX_LEN (sizeof(COST_PREFIX) - 1u)
@@ -24,13 +24,13 @@ static const char *const layer_names[DEVICE_COST_LAYERS] = {
 };
 
 static const uint32_t builtin_int8[DEVICE_COST_LAYERS] = {
-    5537113u, 2308440u, 2629795u, 2258110u, 2740950u,
-    2245696u, 2625603u, 2241775u, 2630053u, 3440u
+    5520790u, 2314905u, 2493531u, 2261760u, 2594383u,
+    2259369u, 2491451u, 2244464u, 2493730u, 3428u
 };
 
 static const uint32_t builtin_fp32[DEVICE_COST_LAYERS] = {
-    7461520u, 1690270u, 4372386u, 1554654u, 4619036u,
-    1554491u, 4351176u, 1554593u, 4508221u, 4872u
+    7461418u, 1690223u, 4372320u, 1554635u, 4619025u,
+    1554481u, 4359090u, 1554570u, 4508462u, 4870u
 };
 
 /* Captures taken over serial carry CRLF, so a carriage return counts as a

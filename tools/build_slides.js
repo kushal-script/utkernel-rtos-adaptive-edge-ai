@@ -67,7 +67,7 @@ function arrow(s, x, y, w, h) {
     { x:M, y:4.15, w:9.4, h:0.5, isTextBox:true, margin:0, valign:"top",
       fontFace:BODY, fontSize:17, color:ICE });
 
-  const chips=[["98.2 ms","adaptive latency"],["94.0 %","core accuracy"],["120 ms","deadline held"]];
+  const chips=[["95.9 ms","adaptive latency"],["94.0 %","core accuracy"],["120 ms","deadline held"]];
   chips.forEach((c,i)=>{
     const x=M+i*3.1;
     s.addText(c[0], { x, y:5.25, w:2.9, h:0.55, isTextBox:true, margin:0, valign:"top",
@@ -100,8 +100,8 @@ function arrow(s, x, y, w, h) {
   });
 
   const bx=7.35, bw=5.25;
-  [["Static FP32","misses the deadline","125.9",RED],
-   ["Static INT8","leaves performance unused","101.5",NAVY]].forEach((r,i)=>{
+  [["Static FP32","misses the deadline","126.0",RED],
+   ["Static INT8","leaves performance unused","99.3",NAVY]].forEach((r,i)=>{
     const y=1.85+i*1.72;
     card(s, bx, y, bw, 1.5, LIGHT);
     s.addText(r[0], { x:bx+0.35, y:y+0.34, w:2.9, h:0.35, isTextBox:true, margin:0, valign:"top",
@@ -165,9 +165,9 @@ function arrow(s, x, y, w, h) {
 // ============ 4. HEADLINE RESULT ============
 {
   const s = lightSlide("The adaptive point is faster than either static build", "MEASURED ON HARDWARE");
-  const rows=[["Static FP32","125.9 ms","missed","23.5 %"],
-              ["Static INT8","101.5 ms","met","39.9 %"],
-              ["Adaptive","98.2 ms","met","42.0 %"]];
+  const rows=[["Static FP32","126.0 ms","missed","23.5 %"],
+              ["Static INT8","99.3 ms","met","41.0 %"],
+              ["Adaptive","95.9 ms","met","43.3 %"]];
   const x0=M, y0=1.95, tw=7.6, rh=0.98;
   const cols=[0.35, 3.05, 4.75, 6.35];
   [["CONFIGURATION",2.6],["LATENCY",1.6],["DEADLINE",1.6],["CORE IDLE",1.3]].forEach((h,i)=>{
@@ -190,7 +190,7 @@ function arrow(s, x, y, w, h) {
 
   const px=8.75, pw=3.85, py=y0+0.44, ph=3*rh-0.14;
   card(s, px, py, pw, ph, AMBER);
-  s.addText("98.2 ms", { x:px+0.32, y:py+0.55, w:pw-0.64, h:0.9, isTextBox:true, margin:0, valign:"top",
+  s.addText("95.9 ms", { x:px+0.32, y:py+0.55, w:pw-0.64, h:0.9, isTextBox:true, margin:0, valign:"top",
       fontFace:HEAD, fontSize:44, bold:true, color:INK });
   s.addText("faster than the best static compile, at identical accuracy",
     { x:px+0.32, y:py+1.55, w:pw-0.64, h:0.95, isTextBox:true, margin:0, valign:"top",
@@ -210,8 +210,8 @@ function arrow(s, x, y, w, h) {
   const s = lightSlide("Why a mixed configuration wins", "THE MECHANISM");
   s.addImage({ path:FIG("layer_inversion.png"), x:M, y:1.7, w:11.9, h:3.45 });
   const cy=5.35, cw=3.78, gap=0.28;
-  const cards=[["Four depthwise layers","57 percent slower in INT8, their kernels cannot pack",LIGHT,INK,SLATE],
-               ["Every other layer","32 percent faster in INT8, packed SXTB16 and SMLAD",LIGHT,INK,SLATE],
+  const cards=[["Four depthwise layers","43 percent slower in INT8, their kernels cannot pack",LIGHT,INK,SLATE],
+               ["Every other layer","38 percent faster in INT8, packed SXTB16 and SMLAD",LIGHT,INK,SLATE],
                ["So the optimum is mixed","no single precision build can express it",NAVY,AMBER,ICE]];
   cards.forEach((c,i)=>{
     const x=M+i*(cw+gap);
@@ -285,7 +285,7 @@ function arrow(s, x, y, w, h) {
 {
   const s = lightSlide("The three characteristics the contest rewards", "RESULTS");
   const cards=[["Real time","The deadline is derived from the application, not tuned to the answer. Under live pipeline load the converged mask ran every traced inference at 101 ms, while static FP32 was over on all 45 of its.","120 ms","held under live load"],
-               ["Power","The kernel idle hook shipped empty, so the core spun at 250 MHz between blocks. It now sleeps under BASEPRI. Identical audio, identical windows.","1.79×","longer asleep than FP32"],
+               ["Power","The kernel idle hook shipped empty, so the core spun at 250 MHz between blocks. It now sleeps under BASEPRI. Identical audio, identical windows.","1.84×","longer asleep than FP32"],
                ["Footprint","Layer weights are streamed through tk_get_mpl so only the working layer occupies SRAM, with peak pool use measured rather than asserted.","117 KB","of 272 KB SRAM"]];
   const cw=3.78, gap=0.28, y=1.9, ch=4.42;
   cards.forEach((c,i)=>{
@@ -374,7 +374,7 @@ function arrow(s, x, y, w, h) {
   s.addText("The signal source is one interface with two implementations, and the pipeline above it does not know where samples come from. The task graph and the adaptation primitives carry over to any sensor domain: vibration, audio, temperature, biosignals.",
     { x:M, y:2.5, w:8.4, h:1.5, isTextBox:true, margin:0, valign:"top",
       fontFace:BODY, fontSize:16, color:ICE, lineSpacingMultiple:1.25 });
-  const stats=[["98.2 ms","adaptive latency"],["1.79×","longer asleep"],["0","dropped blocks"]];
+  const stats=[["95.9 ms","adaptive latency"],["1.84×","longer asleep"],["0","dropped blocks"]];
   stats.forEach((st,i)=>{
     const x=M+i*3.0;
     s.addText(st[0], { x, y:4.35, w:2.8, h:0.62, isTextBox:true, margin:0, valign:"top",

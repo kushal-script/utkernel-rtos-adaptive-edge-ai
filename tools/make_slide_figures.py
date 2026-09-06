@@ -27,11 +27,19 @@ INK = "#16203F"
 
 
 def latest_capture() -> str:
-    for pattern in ("*path-independent*", "*cost-aware*"):
-        hits = sorted(glob.glob(str(REPO_ROOT / "experiments" / pattern / "data" / "raw_capture.txt")))
-        if hits:
-            return Path(hits[-1]).read_text()
-    raise SystemExit("no controller capture found under experiments/")
+    """The newest run that carries both a cost table and a decision trace.
+
+    Selected by content rather than by folder name, so the figures follow the
+    most recent run that can actually support them instead of a hard coded one
+    that a later measurement has superseded.
+    """
+    hits = sorted(glob.glob(str(REPO_ROOT / "experiments" / "*" / "data" / "raw_capture.txt")))
+    for path in reversed(hits):
+        text = Path(path).read_text()
+        if "BENCH_COST" in text and "BENCH_TRACE" in text:
+            print(f"figures from {Path(path).parents[1].name}")
+            return text
+    raise SystemExit("no capture with a cost table and a decision trace under experiments/")
 
 
 def layer_inversion(text: str):

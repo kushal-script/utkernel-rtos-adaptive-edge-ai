@@ -69,14 +69,15 @@ capture the costs come from is named in the output of every command.
 
 **No power figure is produced.** The board measures idle residency by counting
 cycles spent in `WFI`. A desktop scheduler idle fraction has no relationship to
-the published 23.5, 39.9 and 42.0 percent, so nothing is reported rather than
+the published 23.5, 41.0 and 43.3 percent, so nothing is reported rather than
 something a reader would take as comparable.
 
 **The mask costs are rankings, not latencies.** The per layer table excludes the
-conversions inserted where consecutive layers disagree on precision, so summing
-it gives a figure below the end to end latency the board measures for the same
-mask. The published latencies are the board's, and they are in the README and
-`docs/benchmarking.md`, not here.
+conversions inserted where consecutive layers disagree on precision, and it
+carries the calibration probe's own overhead, so summing it neither matches nor
+consistently bounds the end to end latency the board measures: for a mixed mask
+it falls below, for a uniform one it can sit above. The published latencies are
+the board's and they are in the repository README, not here.
 
 **Scheduling is faithful at kernel calls, not between them.** The board runs one
 core with a strictly priority preemptive kernel, so only one task touches shared
