@@ -107,6 +107,8 @@ behind the same interface for when a live demonstration is wanted. See
 * [Signal source](docs/signal_source.md), how samples reach the pipeline
 * [Inference core](docs/inference_core.md), quantisation and precision switching
 * [Novelty](docs/novelty.md), the research claim
+* [Applications](docs/applications.md), where this transfers, tested rather than
+  asserted, and where it does not
 * [Hardware](docs/hardware.md), board, clock tree, memory
 * [Benchmarking](docs/benchmarking.md), how the numbers are produced
 * [Power](docs/power.md), the mechanism, the measurement, and what is not claimed

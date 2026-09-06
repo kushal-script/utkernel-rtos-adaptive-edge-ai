@@ -154,10 +154,26 @@ disagreement is therefore a hardware question, never an open one.
 
 ---
 
-**11. Reuse**
+**11. What this generalises to**
 
-The task graph and adaptation primitives are domain independent: the signal
-source is one interface with two implementations, and the pipeline above it does
-not know where samples come from. Open source, MIT.
+The operating point is a property of **relative per layer cost**, and of nothing
+else. Three experiments pin that down:
 
-github.com/kushal-script/utkernel-rtos-adaptive-kws
+* **Remove the DSP extension entirely** and the board converges on the same
+  mask. The depthwise layers do not move at all, because they never used the
+  packed path: their channel access is not contiguous. The inversion is
+  **structural to depthwise separable convolution**, not a library that nobody
+  finished optimising, which puts it in MobileNet, DS-CNN and EfficientNet Lite
+  alike.
+* **Double every cycle count** and the mask is unchanged. The controller ranks
+  on differences, so a slower clock or a thermal throttle changes whether the
+  deadline is met, never which configuration is cheapest.
+* **Give depthwise a kernel that wins** and the optimum collapses to plain INT8,
+  found in ten demotions. The mixed answer exists exactly as long as the
+  inversion does, and the controller finds the new one unprompted.
+
+To port it: swap the signal source behind one interface, the model, and the test
+for an interesting frame. Controller, calibration, deadline logic and weight
+streaming are untouched.
+
+Open source, MIT. github.com/kushal-script/utkernel-rtos-adaptive-kws

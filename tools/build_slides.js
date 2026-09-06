@@ -369,26 +369,34 @@ function arrow(s, x, y, w, h) {
   const s = darkSlide();
   s.addShape(pres.ShapeType.ellipse, { x:-1.8, y:4.2, w:4.6, h:4.6, fill:{color:"27306E"}, line:NOLINE() });
   s.addShape(pres.ShapeType.ellipse, { x:10.9, y:-1.2, w:4.4, h:4.4, fill:{color:"27306E"}, line:NOLINE() });
-  s.addText("A template, not a one off", { x:M, y:1.45, w:9.6, h:0.8, isTextBox:true, margin:0,
-      valign:"top", fontFace:HEAD, fontSize:40, bold:true, color:WHITE });
-  s.addText("The signal source is one interface with two implementations, and the pipeline above it does not know where samples come from. The task graph and the adaptation primitives carry over to any sensor domain: vibration, audio, temperature, biosignals.",
-    { x:M, y:2.5, w:8.4, h:1.5, isTextBox:true, margin:0, valign:"top",
-      fontFace:BODY, fontSize:16, color:ICE, lineSpacingMultiple:1.25 });
-  const stats=[["95.9 ms","adaptive latency"],["1.84×","longer asleep"],["0","dropped blocks"]];
-  stats.forEach((st,i)=>{
-    const x=M+i*3.0;
-    s.addText(st[0], { x, y:4.35, w:2.8, h:0.62, isTextBox:true, margin:0, valign:"top",
-        fontFace:HEAD, fontSize:32, bold:true, color:AMBER });
-    s.addText(st[1], { x, y:5.0, w:2.8, h:0.35, isTextBox:true, margin:0, valign:"top",
-        fontFace:BODY, fontSize:13, color:ICE });
+  s.addText("What this generalises to", { x:M, y:1.15, w:9.6, h:0.75, isTextBox:true, margin:0,
+      valign:"top", fontFace:HEAD, fontSize:38, bold:true, color:WHITE });
+  s.addText("The operating point is a property of relative per layer cost, and of nothing else. Three experiments pin that down.",
+    { x:M, y:2.02, w:9.6, h:0.5, isTextBox:true, margin:0, valign:"top",
+      fontFace:BODY, fontSize:15, color:ICE });
+  const gen=[["Remove the DSP extension","Same mask. The depthwise layers do not move, they never used the packed path. The inversion is structural to depthwise separable convolution, so it is there in MobileNet and DS-CNN alike."],
+             ["Double every cycle count","Same mask. A slower clock or a thermal throttle changes whether the deadline is met, never which configuration is cheapest."],
+             ["Give depthwise a kernel that wins","Optimum collapses to plain INT8 in ten demotions. The mixed answer lasts exactly as long as the inversion, and the controller finds the new one unprompted."]];
+  const gw=3.78, ggap=0.28;
+  gen.forEach((g,i)=>{
+    const x=M+i*(gw+ggap);
+    s.addShape(pres.ShapeType.roundRect, { x, y:2.72, w:gw, h:2.5, rectRadius:0.10,
+        fill:{ color:"27306E" }, line: NOLINE() });
+    s.addText(g[0], { x:x+0.3, y:2.98, w:gw-0.6, h:0.8, isTextBox:true, margin:0, valign:"top",
+        fontFace:HEAD, fontSize:15, bold:true, color:AMBER });
+    s.addText(g[1], { x:x+0.3, y:3.78, w:gw-0.6, h:1.3, isTextBox:true, margin:0, valign:"top",
+        fontFace:BODY, fontSize:11.5, color:ICE, lineSpacingMultiple:1.15 });
   });
+  s.addText("To port it: swap the signal source behind one interface, the model, and the test for an interesting frame. Controller, calibration, deadline logic and weight streaming are untouched.",
+    { x:M, y:5.42, w:CW, h:0.5, isTextBox:true, margin:0, valign:"top",
+      fontFace:BODY, fontSize:13, italic:true, color:MID });
   s.addText("github.com/kushal-script/utkernel-rtos-adaptive-kws",
     { x:M, y:5.95, w:CW, h:0.4, isTextBox:true, margin:0, valign:"top",
       fontFace:BODY, fontSize:16, bold:true, color:WHITE });
   s.addText("MIT licensed   ·   builds and reproduces every number from the board alone, no external hardware",
     { x:M, y:6.42, w:CW, h:0.4, isTextBox:true, margin:0, valign:"top",
       fontFace:BODY, fontSize:12.5, color:MID });
-  s.addNotes("Open source, reproducible from the board alone.");
+  s.addNotes("The strongest form of the reuse claim: not that the code is tidy, but that the result was tested for what it depends on. Removing the DSP extension was expected to destroy the inversion and did not, which is how we learned it is structural to depthwise convolution rather than a gap in the kernel library.");
 }
 
 pres.writeFile({ fileName: path.join(REPO, "docs/TRON2026_intro_slides.pptx") })
