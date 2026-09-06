@@ -13,6 +13,7 @@ travels with the firmware.
 | Toolchain | `arm-none-eabi-gcc` (tested with 16.1.0), CMake 3.22 or newer |
 | Flashing | STM32CubeProgrammer, or the fallback in the appendix |
 | Host tools | Python 3.11 or newer, `pip install -r requirements.txt` |
+| Slides, optional | Node.js with `pptxgenjs`, only to rebuild the committed deck, see [slides_outline.md](slides_outline.md) |
 
 Nothing needs to be wired to the board. No microphone, no sensor, no jumper
 changes.
@@ -63,11 +64,23 @@ capture, the parsed numbers, and the figures.
 | :-- | :-- |
 | `BENCH_LIVE` | One configuration, whole pipeline live: end to end accuracy and core idle residency |
 | `BENCH` | One configuration, inference core in isolation: latency and core accuracy |
+| `BENCH_LAYER` | Measured cycles for one layer under one precision, from the isolated benchmark runs |
 | `BENCH_COST` | The per layer cost table the controller measured on this silicon |
+| `BENCH_ESTIMATE` | The controller's calibrated whole inference estimate per precision and the settled mask |
 | `BENCH_TRACE` | Every controller decision, so convergence can be plotted |
 | `BENCH_CONVERGE` | The settled mask and how many deadline misses occurred while converging |
+| `BENCH_STATE` | The learned gate state: VAD threshold, noise floor, blocks seen, active blocks |
+| `BENCH_CONTROL` | Lever usage counts: decisions, demotions, promotions, window resizes sent by mailbox, priority raises |
+| `BENCH_PIPELINE` | Whole pipeline counters: inferences, scored, correct, overruns, frames, skipped, resyncs, capture overruns |
+| `BENCH_GRID` | Feature grid restarts, how often the gate closed while a grid was filling |
+| `BENCH_MEMORY` | Peak layer pool use against pool capacity, the `tk_get_mpl` streaming evidence |
 | `BENCH_CAPTURE` | Capture block rate against the expected rate, and dropped blocks |
 | `BENCH_POWER` | Idle residency |
+
+`BENCH_CONTROL`, `BENCH_MEMORY`, and `BENCH_GRID` are the direct evidence that
+the kernel primitives are exercised, not decorative: window resizes travel by
+`tk_snd_mbx`, priority raises by `tk_chg_pri`, and the pool peak comes from
+`tk_get_mpl` streaming one layer at a time.
 
 ## 5. Check the software without a board
 

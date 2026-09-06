@@ -49,11 +49,11 @@ The GPDMA channel runs in circular linked list mode with a single node that desc
 
 ## DWT cycle counter
 
-The DWT CYCCNT register is the timing source for the whole adaptation loop. `dwt_init` enables the trace unit and the cycle counter, `dwt_read` returns the count, and `dwt_log_layer` streams per layer cycle counts over SWO ITM port 0. See `benchmark/dwt_logger.c`.
+The DWT CYCCNT register is the timing source for the whole adaptation loop. `dwt_init` enables the trace unit and the cycle counter and `dwt_read` returns the count. `dwt_log_layer` in `benchmark/dwt_logger.c` can stream per layer counts over SWO ITM port 0, but it is an unused alternative kept for debugging: per layer cycles actually travel in the UART benchmark report, `BENCH_LAYER`.
 
 ## MPU
 
-The MPU is disabled. The generated `MPU_Config` guarded only the option byte page, which is already read only in hardware, and its privileged default mode bus faulted the unprivileged µT-Kernel tasks the moment they touched DMA or peripheral registers. TrustZone is the intended isolation mechanism for this project, not the MPU. The disabled configuration function is kept in `main.c` for reference.
+The MPU is disabled. The generated `MPU_Config` guarded only the option byte page, which is already read only in hardware, and its privileged default mode bus faulted the unprivileged µT-Kernel tasks the moment they touched DMA or peripheral registers. TrustZone was the plan's intended isolation mechanism and was descoped, see [novelty.md](novelty.md), so the delivered firmware runs without memory isolation and the MPU stays off for the reasons above. The disabled configuration function is kept in `main.c` for reference.
 
 ## Toolchain
 
@@ -62,7 +62,7 @@ The MPU is disabled. The generated `MPU_Config` guarded only the option byte pag
 | Compiler | `arm-none-eabi-gcc`, Homebrew formula |
 | Build | CMake, Ninja or Make |
 | Flash | `STM32_Programmer_CLI`, ST bundle |
-| Debug | ST-LINK GDB server, ST bundle, SWO for cycle logging |
+| Debug | ST-LINK GDB server, ST bundle; cycle counts travel in the UART telemetry |
 | Kernel | µT-Kernel 3.0 BSP2 for STM32H533 |
 
 `setup_env.sh` activates the venv and puts all of the above on `PATH`, and defines the `flash`, `connect`, and `probe` aliases.

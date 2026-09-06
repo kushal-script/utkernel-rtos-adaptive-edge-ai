@@ -35,3 +35,6 @@ model/datasets/
 # Python bytecode
 __pycache__/
 *.py[cod]
+
+# Upstream kernel clones kept for reference, never referenced by the build (kernel is vendored in KWS_TRON/mtk3/)
+mtk3_repos/

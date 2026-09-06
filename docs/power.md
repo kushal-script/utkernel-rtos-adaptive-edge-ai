@@ -73,7 +73,8 @@ milliwatts and energy per classification. The firmware side is already done: the
 benchmark holds each configuration for a fixed window with the pipeline live, so
 the procedure is to put the meter in circuit, run once, and read the average
 current during each of the three thirty second windows, which the telemetry
-delimits. Nothing needs to be rebuilt.
+delimits. Nothing needs to be rebuilt. It was not done for this submission for
+a plain resourcing reason: no bench ammeter was available before the deadline.
 
 Until that is done the honest statement is the one above: the mechanism exists,
 the idle fraction is measured, the ratio between configurations is measured, and

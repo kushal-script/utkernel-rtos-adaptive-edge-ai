@@ -149,7 +149,8 @@ disagreement is therefore a hardware question, never an open one.
   to end accuracy, measured separately, is 47 to 57 percent and the
   configurations are **not** statistically separable at this sample size.
 * Power is an **idle residency ratio**, not a wattage. No ammeter was used.
-* TrustZone from the plan is **cut**, and the deviation is documented.
+* TrustZone, promised in the plan's section 6.6, is **cut** as separable from
+  the co-optimisation thesis, and the descope is documented.
 
 ---
 

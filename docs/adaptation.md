@@ -10,7 +10,7 @@ model. Read [architecture.md](architecture.md) first for the task graph.
 | :-- | :-- | :-- | :-- | :-- |
 | Capture window | 64 to 256 samples, step 16 | T1 | mailbox from T5 | Samples per DMA half block, so how often the pipeline is woken |
 | Active frames | 16 to 49 | T3 | event flag plus shared state from T5 | How many MFCC frames are computed, the rest of the grid stays zero |
-| Layer precision | INT8 or FP32, per layer | T4 | T5 after a budget overrun | Cycles and energy per layer against numeric accuracy |
+| Layer precision | INT8 or FP32, per layer | T4 | T5, a cost ranked hill climb over the measured per layer gain, considering both directions on every decision | Cycles and energy per layer against numeric accuracy |
 
 Task priority is a fourth lever. T5 raises T4 with `tk_chg_pri` when a deadline
 is at risk and lowers it again when slack returns.
@@ -38,8 +38,8 @@ each setting is measured, not assumed, and the curve is written to
 
 ## Deviations from the program plan
 
-The plan was written before implementation. Three points needed adjusting, and
-the reasoning is recorded here rather than silently changed.
+The plan was written before implementation. The points below needed adjusting,
+and the reasoning is recorded here rather than silently changed.
 
 Section 6.1 describes shrinking the window on a flat signal to reduce inference
 frequency. Shrinking the DMA block on its own raises the interrupt rate rather
@@ -62,6 +62,16 @@ file. The honest claim, and the one the benchmark reports, is a measured
 speedup on this silicon rather than a figure derived from an assumed cycle
 count. See [novelty.md](novelty.md).
 
+The development environment moved as well. The plan named STM32CubeIDE, Edge
+Impulse for training, CMSIS-DSP for the FFT, and SWO trace for cycle logging.
+Delivered instead: a CMake build with `arm-none-eabi-gcc` so a reviewer needs
+no IDE, a PyTorch training pipeline committed under `model/` so the model
+reproduces from a command rather than a web service, an in tree FFT so every
+cycle the benchmark reports belongs to code in this repository, and telemetry
+over the ST-LINK virtual COM port so reading the board needs a serial terminal
+and nothing else. Each substitution trades a named tool for a self contained,
+reproducible equivalent.
+
 ## The voice activity gate
 
 T2 keeps a rolling estimate of frame energy and variance. Below threshold the
@@ -71,12 +81,25 @@ which is a far larger saving than skipping only the transform, and it needs no
 special model behaviour because the classification is made before the model is
 reached.
 
+Because the gate stops the pipeline at T2, before T3 is ever woken, the
+`skipped` counter in `BENCH_PIPELINE` legitimately reads zero: frames the gate
+suppresses are never scheduled in the first place, so there is nothing for T3
+to skip. The `tk_ref_flg` peek in T3 is a guard for the gate closing while a
+grid is mid fill, and in the recorded runs it never fires, because the
+controller runs at a higher priority and reopens the gate before T3 next
+wakes, so the `BENCH_GRID` restart count reads zero as well. The gate's effect
+shows up in the telemetry as idle residency and the block counts in
+`BENCH_STATE`, not as skipped frames.
+
 ## Self tuning
 
 Fixed thresholds only work in the acoustic environment they were tuned in. T5
 therefore estimates the quiescent noise floor online and places the gate
 threshold a fixed margin above it, and it adapts the cycle budget to the
-latency it actually observes. The controller must be shown to converge, and to
-beat the best fixed thresholds found by sweep, otherwise the self tuning is
-decoration. That comparison is a required part of the M5 exit criteria in
-[roadmap.md](roadmap.md).
+latency it actually observes. The controller is shown to converge: the
+precision mask reaches the same operating point from both extremes, six
+demotions from full FP32 and four promotions from all INT8. The planned
+comparison against the best fixed thresholds found by sweep was not performed,
+and is recorded as a descope in [roadmap.md](roadmap.md) rather than quietly
+dropped: the convergence evidence stands on its own, and the sweep remains the
+right next experiment for the threshold half of the claim.

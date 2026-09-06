@@ -29,7 +29,8 @@ express, and the controller finds it from measurements it takes itself.
 The controller calibrates on its first two inferences, measuring what every
 layer costs in each precision on this silicon, then ranks layers by that
 measurement rather than by index. On this part the four depthwise layers are
-about 45 percent slower in INT8, because their kernels are scalar while every
+together 57 percent slower in INT8, between 41 and 82 percent depending on the
+layer, because their kernels are scalar while every
 other layer uses packed multiply accumulate, so the cost optimum is mixed. From
 full FP32 the controller reaches it in six cost reducing demotions; restarted
 from all INT8 it climbs back to the same mask in four promotions. Converging to
@@ -39,8 +40,11 @@ silicon rather than of where the search began.
 Two accuracy figures are reported and they are not the same measurement. The
 94.0 percent above is **core accuracy on pre computed feature grids**, which
 exercises the inference core and nothing upstream of it. End to end accuracy,
-through capture, features, and inference, is scored separately on device and is
-currently on too small a sample to state as a figure. See
+through capture, features, and inference, is scored separately on device over
+the live thirty second windows: 77 to 83 classifications per configuration,
+point estimates between 47 and 57 percent, and at that sample size the three
+configurations are not statistically separable, so no configuration is claimed
+to beat another on this axis. See
 [docs/benchmarking.md](docs/benchmarking.md).
 
 Power now has a mechanism as well as a number. The kernel idle hook shipped as

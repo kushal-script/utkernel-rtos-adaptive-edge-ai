@@ -4,9 +4,10 @@
 
 #include <tk/tkernel.h>
 
-/* Every link between tasks is a native kernel primitive. Remove the kernel and
-   the adaptive loop stops working, which is the point of the design. The full
-   map is in docs/architecture.md.
+/* Every wakeup between tasks is a native kernel primitive; adaptation values
+   ride single word shared state. Remove the kernel and the adaptive loop stops
+   working, which is the point of the design. The full map is in
+   docs/architecture.md.
 
    One event flag object per consumer edge, never shared. With TA_WMUL and a
    TWF_BITCLR wait, the kernel stops releasing waiters as soon as one of them
@@ -62,9 +63,12 @@ extern ID mbxid_window;
 /* T4 per layer weight streaming, so only the working layer occupies SRAM. */
 extern ID mplid_layer;
 
-/* Shared adaptation state. Written only by T5, read by the others. Each field
-   is a single aligned word, so a reader never sees a torn value and no lock is
-   needed on this core. */
+/* Shared adaptation state. T5 makes every adaptation decision; T1 echoes the
+   window resize and active frame count it has applied, and the benchmark
+   writes precision_mask and pin_precision directly to hold a configuration.
+   Each field is a single
+   aligned word, so a reader never sees a torn value and no lock is needed on
+   this core. */
 typedef struct {
     volatile uint32_t window_samples;
     volatile uint32_t active_frames;

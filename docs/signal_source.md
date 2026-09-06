@@ -92,20 +92,24 @@ the pipeline expects before any consumer sees it. Wiring is in
 [mic_verification.md](mic_verification.md). This path has not been exercised on
 hardware.
 
-## What still needs proving on hardware
+## Proven on hardware
 
-Nothing in the replay path has run on silicon yet, and two points deserve a
-meter rather than an assumption.
+Two points in this design deserved a measurement rather than an assumption, and
+both were settled by the first hardware sessions and hold in every run since.
 
-The first is whether GPDMA1 can read the flash region through the port it is
-configured to use. If it cannot, the corpus can be staged into SRAM at boot and
-the transfer becomes memory to memory in origin while staying peripheral to
-memory in configuration; the budget has room for one clip.
+The first was whether GPDMA1 can read the flash corpus through the port it is
+configured to use. It can: the capture buffer holds the corpus, no SRAM staging
+was needed, and the fallback of staging one clip at boot was never exercised.
 
-The second is the pacing itself. The interrupt cadence should be the window
-length divided by 16 kHz, so 16 ms at the default 256 sample window. If the
-blocks arrive far faster than that, the timer request is not gating the channel
-and the transfer is running free.
+The second was the pacing itself. It is real: the block rate scales with the
+window as the timer dictates and sits orders of magnitude below what a free
+running channel would produce, and the capture overrun count reads zero across
+the live windows of the final run, see
+`experiments/2026-08-30_003716_hardware-mask-divergence-fixed`. The reported
+rate can sit above the expectation printed beside it, because the expectation
+is computed from the window size at print time while the controller resizes
+the window during the measurement.
 
-Both checks, and the expected numbers, are listed in
-[benchmarking.md](benchmarking.md).
+The checks and their expected numbers remain listed in
+[benchmarking.md](benchmarking.md) for anyone bringing the pipeline up on a
+fresh board.

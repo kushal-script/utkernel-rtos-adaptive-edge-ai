@@ -64,6 +64,13 @@ cutting average work at a stated accuracy cost against the static baseline, and
 the learned thresholds are shown to converge and to beat the best fixed
 thresholds found by sweep.
 
+The sweep half of that exit was descoped. The convergence evidence delivered is
+the precision mask reaching the same operating point from both extremes, and the
+gate threshold is validated by the gate closing and reopening correctly on the
+stratified corpus, not against a swept fixed threshold baseline. The sweep
+remains the right next experiment for the threshold half of the self tuning
+claim, see the self tuning note in [adaptation.md](adaptation.md).
+
 ## M6, benchmark harness, partly done
 
 The on device harness scores the evaluation set under static and adaptive
@@ -89,14 +96,16 @@ ms, INT8 101.5 ms, adaptive 98.2 ms, the adaptive point faster than either pure
 build because the cost optimum on this silicon is mixed. The controller reaches
 the same mask from both extremes, six demotions from FP32 and four promotions
 from INT8. The gate closes and reopens on a corpus that contains silence, the
-window is regulated against measured capture overruns, and the idle hook sleeps
-with residency measured at 82.3 percent.
+window is regulated against measured capture overruns, and the idle hook
+sleeps: with the whole pipeline live the core is asleep 42.0 percent of wall
+time in the adaptive configuration against 23.5 for static FP32, a factor of
+1.79.
 
 The introduction slides are built, see
 [TRON2026_intro_slides.pptx](TRON2026_intro_slides.pptx) and the content in
 [slides_outline.md](slides_outline.md), both regenerated from the raw captures
 by `tools/make_slide_figures.py` and `tools/build_slides.js`.
 
-What remains is a current measurement at the IDD jumper for the power axis and
-a larger end to end accuracy sample. TrustZone is cut,
-see the deviations note in [novelty.md](novelty.md).
+What remains is a current measurement at the IDD jumper for the power axis, a
+larger end to end accuracy sample, and the fixed threshold sweep descoped from
+M5. TrustZone is cut, see the rationale in [novelty.md](novelty.md).

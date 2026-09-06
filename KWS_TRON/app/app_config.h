@@ -76,11 +76,6 @@
                               * 1000000u / SAMPLE_RATE_HZ)
 #define T4_DEADLINE_CYCLES   ((uint32_t)T4_DEADLINE_US * T4_CYCLES_PER_US)
 
-/* Hysteresis on the promotion side, as a percentage of the deadline that a
-   promotion must leave free. Without it the controller promotes right up to the
-   deadline and demotes again on the next inference. */
-#define T5_PROMOTE_MARGIN_PCT 5
-
 /* Consecutive decisions with no lever change before the controller declares
    itself converged. The benchmark reports the latched mask, so the figure
    describes a settled system rather than whatever was being tried. */

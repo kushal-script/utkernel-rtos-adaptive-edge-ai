@@ -22,8 +22,10 @@ STM32H533 has no SMPS, and earlier wording here that routed the measurement
 through one was wrong.
 
 The mechanism now exists: the kernel idle hook sleeps rather than spinning, and
-the idle residency is measured on device at 82.3 percent of wall time. Average
-current itself still needs a meter. See [power.md](power.md).
+with the whole pipeline live over identical thirty second windows the core is
+asleep 42.0 percent of wall time in the adaptive configuration against 39.9 for
+static INT8 and 23.5 for static FP32. Average current itself still needs a
+meter. See [power.md](power.md).
 
 ### Accuracy
 
@@ -37,17 +39,18 @@ and the wrong number for a claim about the pipeline. It is 94.0 percent, and
 identical across every precision configuration.
 
 **End to end accuracy** is scored on device from replayed audio through capture,
-the gate, feature extraction, and inference. It is now measured, having
-previously been impossible because the scoring guard demanded the feature grid
-sit entirely inside one replay clip, which a grid spanning nearly a whole clip
-essentially never does. On the current six clip corpus it lands on roughly ten
-scored classifications per run and varies widely between runs, so it is
-reported as a raw count and **not** stated as a percentage: the sample is far
-too small, and there is a known limitation behind it, the feature grid can
-stitch across a gate closure and so contain frames from either side of a
-silence. Widening that sample is future work, and the honest position until
-then is that the end to end path works and its accuracy is not yet
-characterised.
+the gate, feature extraction, and inference. The benchmark holds each
+configuration for a thirty second window with the whole pipeline live, which
+yields 77 to 83 scored classifications per configuration; T3 carries a guard
+that restarts the feature grid if the gate closes mid fill, see the gate note
+in [adaptation.md](adaptation.md). The measured point estimates sit
+between 47 and 57 percent, and at this sample size the Wilson intervals of the
+three configurations overlap, so they are **not** statistically separable and no
+configuration is claimed to beat another on this axis. The number is quoted only
+with that qualification: it says the end to end path works and roughly where it
+stands, while core accuracy above remains the right measurement for the
+quantisation and precision switching claim. Widening the sample with a larger
+corpus and longer live windows is future work.
 
 ## Running it
 

@@ -18,7 +18,7 @@ decisions flow from T5 back to the upstream tasks.
 
 | Task | Priority | Role | Owns |
 | :-- | :-- | :-- | :-- |
-| T5 | 2 | Adapt controller | Every adaptation decision, and only T5 writes adaptation state |
+| T5 | 2 | Adapt controller | Every adaptation decision and the shared adaptation state; T1 echoes applied resizes into it, and the benchmark pins it |
 | T1 | 3 | Ingest | The capture hardware, and the window resize the mailbox carries |
 | T2 | 4 | Variance monitor and gate | Block energy, the noise floor, the decision to run the pipeline at all |
 | T3 | 5 | Feature extract | Frame scheduling, the quantised grid, the active frame count |
@@ -34,8 +34,9 @@ deadline, which is a worse failure than the one being avoided.
 
 ## Inter task communication
 
-Every link is a native kernel primitive. Remove the kernel and the adaptive loop
-collapses, which is the point of the design.
+Every signalling edge is a native kernel primitive, and adaptation values
+travel as single word shared state alongside the wakeups. Remove the kernel and
+the adaptive loop collapses, which is the point of the design.
 
 | Primitive | Direction | Purpose |
 | :-- | :-- | :-- |
