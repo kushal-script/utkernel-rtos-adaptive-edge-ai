@@ -49,7 +49,10 @@ int32_t kws_requantise(int32_t accumulator, int32_t multiplier, int32_t shift)
     int32_t left  = shift > 0 ? shift : 0;
     int32_t right = shift < 0 ? -shift : 0;
 
-    int64_t value = (int64_t)accumulator << left;
+    /* Shifted through an unsigned intermediate because the accumulator is
+       routinely negative and left shifting a negative value is undefined. The
+       bits are the sign extended ones either way, so the result is unchanged. */
+    int64_t value = (int64_t)((uint64_t)accumulator << left);
     value = (value * (int64_t)multiplier + ((int64_t)1 << 30)) >> 31;
 
     if (right > 0) {
