@@ -10,13 +10,19 @@ travels with the firmware.
 | | |
 | :-- | :-- |
 | Board | NUCLEO-H533RE, USB cable |
-| Toolchain | `arm-none-eabi-gcc` (tested with 16.1.0), CMake 3.22 or newer |
+| Toolchain | Arm GNU Toolchain 14.2.Rel1, the bare metal `arm-none-eabi` release with newlib, on `PATH` or with `ARM_TOOLCHAIN_DIR` set to its `bin` directory. CMake 3.22 or newer |
 | Flashing | STM32CubeProgrammer, or the fallback in the appendix |
 | Host tools | Python 3.11 or newer, `pip install -r requirements.txt` |
 | Slides, optional | Node.js with `pptxgenjs`, only to rebuild the committed deck, see [slides_outline.md](slides_outline.md) |
 
 Nothing needs to be wired to the board. No microphone, no sensor, no jumper
 changes.
+
+The shipped image was built with 14.2.Rel1 and every published latency is tied
+to it, because a different compiler regenerates different code. A gcc without
+newlib, which is what the Homebrew `arm-none-eabi-gcc` formula is on its own,
+fails at `stdint.h`; install `arm-none-eabi-newlib` alongside it or use the
+Arm release from developer.arm.com.
 
 ## 1. Build
 

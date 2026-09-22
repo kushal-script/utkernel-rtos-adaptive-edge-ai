@@ -1,5 +1,5 @@
 {
- "command": "/Users/kushalsathyanarayan/Desktop/TRON/build/desktop/kws-desktop run --seconds 14 --trace",
+ "command": "build/desktop/kws-desktop run --seconds 14 --trace",
  "rows": [
   {
    "t": 0.002,

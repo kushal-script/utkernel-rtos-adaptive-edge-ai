@@ -77,7 +77,7 @@ function arrow(s, x, y, w, h) {
   });
   s.addText([
     { text:"NUCLEO-H533RE", options:{bold:true, color:WHITE} },
-    { text:"   Cortex-M33 at 250 MHz   ·   µT-Kernel 3.0   ·   keyword spotting   ·   open source, MIT",
+    { text:"   Cortex-M33 at 250 MHz   ·   µT-Kernel 3.0   ·   keyword spotting   ·   project code MIT, kernel under T-License",
       options:{color:MID} },
   ], { x:M, y:6.6, w:11.0, h:0.35, isTextBox:true, margin:0, valign:"top", fontFace:BODY, fontSize:13.5 });
   s.addNotes("Adaptive keyword spotting where the RTOS is an active co-optimiser rather than a scheduler. Every number in this deck is measured on the board.");
@@ -208,7 +208,8 @@ function arrow(s, x, y, w, h) {
 // ============ 5. WHY MIXED WINS ============
 {
   const s = lightSlide("Why a mixed configuration wins", "THE MECHANISM");
-  s.addImage({ path:FIG("layer_inversion.png"), x:M, y:1.7, w:11.9, h:3.45 });
+  s.addImage({ path:FIG("layer_inversion.png"), x:M, y:1.7, w:11.9, h:3.45,
+      altText:"Measured cycles per layer, INT8 against FP32, with the four depthwise layers highlighted" });
   const cy=5.35, cw=3.78, gap=0.28;
   const cards=[["Four depthwise layers","43 percent slower in INT8, their kernels cannot pack",LIGHT,INK,SLATE],
                ["Every other layer","38 percent faster in INT8, packed SXTB16 and SMLAD",LIGHT,INK,SLATE],
@@ -229,7 +230,8 @@ function arrow(s, x, y, w, h) {
 // ============ 6. THE KERNEL FINDS IT ============
 {
   const s = lightSlide("The kernel finds it by measuring, not by being told", "THE CLOSED LOOP");
-  s.addImage({ path:FIG("convergence.png"), x:5.15, y:1.7, w:7.45, h:3.3 });
+  s.addImage({ path:FIG("convergence.png"), x:5.15, y:1.7, w:7.45, h:3.3,
+      altText:"Controller latency per decision, demotions from full FP32 then promotions from all INT8 to the same mask" });
   const items=[["Calibrate","T4 runs both pure precisions on its first two inferences and records what every layer costs"],
                ["Rank","T5 ranks layers by that measured delta, never by index"],
                ["Hill climb","every accepted move strictly reduces cost, so the walk cannot cycle"]];
@@ -284,7 +286,7 @@ function arrow(s, x, y, w, h) {
 // ============ 8. THREE CHARACTERISTICS ============
 {
   const s = lightSlide("The three characteristics the contest rewards", "RESULTS");
-  const cards=[["Real time","The deadline is derived from the application, not tuned to the answer. Under live pipeline load the converged mask ran every traced inference at 101 ms, while static FP32 was over on all 45 of its.","120 ms","held under live load"],
+  const cards=[["Real time","The deadline is derived from the application, not tuned to the answer. Under live pipeline load the converged mask ran every traced inference between 98.3 and 98.8 ms, while static FP32 was over on all 45 of its.","120 ms","held under live load"],
                ["Power","The kernel idle hook shipped empty, so the core spun at 250 MHz between blocks. It now sleeps under BASEPRI. Identical audio, identical windows.","1.84×","longer asleep than FP32"],
                ["Footprint","Layer weights are streamed through tk_get_mpl so only the working layer occupies SRAM, with peak pool use measured rather than asserted.","117 KB","of 272 KB SRAM"]];
   const cw=3.78, gap=0.28, y=1.9, ch=4.42;
@@ -393,7 +395,7 @@ function arrow(s, x, y, w, h) {
   s.addText("github.com/kushal-script/utkernel-rtos-adaptive-kws",
     { x:M, y:5.95, w:CW, h:0.4, isTextBox:true, margin:0, valign:"top",
       fontFace:BODY, fontSize:16, bold:true, color:WHITE });
-  s.addText("MIT licensed   ·   builds and reproduces every number from the board alone, no external hardware",
+  s.addText("Project code MIT, vendored µT-Kernel 3.0 under T-License 2.1 and 2.2   ·   reproduces every number from the board alone",
     { x:M, y:6.42, w:CW, h:0.4, isTextBox:true, margin:0, valign:"top",
       fontFace:BODY, fontSize:12.5, color:MID });
   s.addNotes("The strongest form of the reuse claim: not that the code is tidy, but that the result was tested for what it depends on. Removing the DSP extension was expected to destroy the inversion and did not, which is how we learned it is structural to depthwise convolution rather than a gap in the kernel library.");

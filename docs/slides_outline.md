@@ -176,4 +176,5 @@ To port it: swap the signal source behind one interface, the model, and the test
 for an interesting frame. Controller, calibration, deadline logic and weight
 streaming are untouched.
 
-Open source, MIT. github.com/kushal-script/utkernel-rtos-adaptive-kws
+Project code MIT, vendored µT-Kernel 3.0 under T-License 2.1 and 2.2.
+github.com/kushal-script/utkernel-rtos-adaptive-kws

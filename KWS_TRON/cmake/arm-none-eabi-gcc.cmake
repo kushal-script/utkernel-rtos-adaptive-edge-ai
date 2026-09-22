@@ -1,9 +1,22 @@
 set(CMAKE_SYSTEM_NAME Generic)
 set(CMAKE_SYSTEM_PROCESSOR arm)
 
-# Arm GNU Toolchain 14.2.Rel1 — full newlib included
-set(TOOLCHAIN_DIR "/Users/kushalsathyanarayan/arm-gnu-toolchain/bin")
+# Arm GNU Toolchain, the bare metal arm-none-eabi release with newlib. The
+# shipped image was built with 14.2.Rel1. Set ARM_TOOLCHAIN_DIR to its bin
+# directory, or put it on PATH. A gcc without newlib, which is what the
+# Homebrew arm-none-eabi-gcc formula is on its own, fails at stdint.h; see
+# docs/operation_manual.md.
 set(TOOLCHAIN_PREFIX arm-none-eabi-)
+find_program(ARM_GCC ${TOOLCHAIN_PREFIX}gcc
+    HINTS $ENV{ARM_TOOLCHAIN_DIR} ${ARM_TOOLCHAIN_DIR}
+          "$ENV{HOME}/arm-gnu-toolchain/bin"
+    PATH_SUFFIXES bin)
+if(NOT ARM_GCC)
+    message(FATAL_ERROR
+        "arm-none-eabi-gcc not found. Install the Arm GNU Toolchain, bare metal "
+        "with newlib, then set ARM_TOOLCHAIN_DIR to its bin directory or add it to PATH.")
+endif()
+get_filename_component(TOOLCHAIN_DIR ${ARM_GCC} DIRECTORY)
 set(CMAKE_C_COMPILER   ${TOOLCHAIN_DIR}/${TOOLCHAIN_PREFIX}gcc)
 set(CMAKE_CXX_COMPILER ${TOOLCHAIN_DIR}/${TOOLCHAIN_PREFIX}g++)
 set(CMAKE_ASM_COMPILER ${TOOLCHAIN_DIR}/${TOOLCHAIN_PREFIX}gcc)

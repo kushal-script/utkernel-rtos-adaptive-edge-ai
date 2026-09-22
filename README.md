@@ -172,6 +172,9 @@ against the float model before emitting anything.
 
 ## License
 
-MIT, see [LICENSE](LICENSE). Vendored third party components keep their own
-licences, listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). Intended
+The project's own code is MIT, see [LICENSE](LICENSE). The vendored µT-Kernel
+3.0 under `KWS_TRON/mtk3/` is not: the TRON Forum distributes it under the
+T-License 2.1 and 2.2, stated in each file's header. Every third party
+component and its licence is listed in
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). Intended
 as a reusable template for real time edge AI on constrained hardware.

@@ -1,8 +1,22 @@
 /*
+ *----------------------------------------------------------------------
+ *    micro T-Kernel 3.0 BSP 2.0
+ *
+ *    Copyright (C) 2023-2024 by Ken Sakamura.
+ *    This software is distributed under the T-License 2.1.
+ *----------------------------------------------------------------------
+ *
+ *    Released by TRON Forum(http://www.tron.org) at 2024/02.
+ *
+ *----------------------------------------------------------------------
+ */
+
+/*
  *	power_save.c (STM32Cube)
  *	Power-Saving Function
  *
- *	Project modification to the vendored BSP. The shipped file left both hooks
+ *	Modified from the file released above. Project modification to the
+ *	vendored BSP. The shipped file left both hooks
  *	empty, so the idle task spun at the full clock and no amount of gating work
  *	upstream could reduce power. Documented in docs/power.md.
  */

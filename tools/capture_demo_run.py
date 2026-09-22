@@ -28,7 +28,7 @@ def main():
                      "line": line.rstrip("\n")})
     proc.wait()
     OUT.parent.mkdir(parents=True, exist_ok=True)
-    OUT.write_text(json.dumps({"command": " ".join(CMD), "rows": rows,
+    OUT.write_text(json.dumps({"command": " ".join([str(BIN.relative_to(REPO))] + CMD[1:]), "rows": rows,
                                "total_s": round(time.monotonic() - started, 2)},
                               indent=1))
     print(f"written: {OUT}  {len(rows)} lines over {rows[-1]['t']:.1f} s")
