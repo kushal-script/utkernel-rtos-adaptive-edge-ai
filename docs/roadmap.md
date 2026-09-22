@@ -106,6 +106,6 @@ The introduction slides are built, see
 [slides_outline.md](slides_outline.md), both regenerated from the raw captures
 by `tools/make_slide_figures.py` and `tools/build_slides.js`.
 
-What remains is a current measurement at the IDD jumper for the power axis, a
-larger end to end accuracy sample, and the fixed threshold sweep descoped from
-M5. TrustZone is cut, see the rationale in [novelty.md](novelty.md).
+What remains is a current measurement at the IDD jumper for the power axis and
+the fixed threshold sweep descoped from M5. End to end accuracy now matches the
+core figure, see [benchmarking.md](benchmarking.md). TrustZone is cut, see the rationale in [novelty.md](novelty.md).

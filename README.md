@@ -40,11 +40,15 @@ silicon rather than of where the search began.
 Two accuracy figures are reported and they are not the same measurement. The
 94.0 percent above is **core accuracy on pre computed feature grids**, which
 exercises the inference core and nothing upstream of it. End to end accuracy,
-through capture, features, and inference, is scored separately on device over
-the live thirty second windows: 77 to 83 classifications per configuration,
-point estimates between 47 and 57 percent, and at that sample size the three
-configurations are not statistically separable, so no configuration is claimed
-to beat another on this axis. See
+through capture, the gate, features, and inference, is scored separately on
+device over the live thirty second windows: 79 to 84 classifications per
+configuration, **98.8 percent for static FP32, 100 for static INT8 and 98.7
+adaptive**. It is higher than the core figure because the replay corpus holds
+three keywords and silence, an easier task than the twelve class evaluation
+set, so what it establishes is that nothing is lost between capture and
+classification, not that the pipeline beats its model. An earlier build
+reported 47 to 57 percent here; two defects in how the feature tensor and its
+ground truth were handed to the classifier accounted for the whole gap, see
 [docs/benchmarking.md](docs/benchmarking.md).
 
 Power now has a mechanism as well as a number. The kernel idle hook shipped as

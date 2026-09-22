@@ -145,9 +145,10 @@ disagreement is therefore a hardware question, never an open one.
 
 **10. What is not claimed**
 
-* Core accuracy 94.0 percent is measured on **pre computed feature grids**. End
-  to end accuracy, measured separately, is 47 to 57 percent and the
-  configurations are **not** statistically separable at this sample size.
+* Core accuracy 94.0 percent is measured on **pre computed feature grids**
+  across all twelve classes. End to end accuracy, 98.8, 100 and 98.7 percent,
+  is measured on a replay corpus of **three keywords and silence**, so it shows
+  the pipeline loses nothing, not that it beats the model.
 * Power is an **idle residency ratio**, not a wattage. No ammeter was used.
 * TrustZone, promised in the plan's section 6.6, is **cut** as separable from
   the co-optimisation thesis, and the descope is documented.

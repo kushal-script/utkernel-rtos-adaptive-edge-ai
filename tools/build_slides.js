@@ -346,7 +346,7 @@ function arrow(s, x, y, w, h) {
   s.addText("Stating the limits precisely is part of the result.",
     { x:M, y:1.78, w:CW, h:0.4, isTextBox:true, margin:0, valign:"top",
       fontFace:BODY, fontSize:15, color:SLATE });
-  const lim=[["Two different accuracies","94.0 percent is core accuracy, scored on pre computed feature grids. End to end accuracy through capture, gate and features is 47 to 57 percent, and at this sample size the three configurations are not statistically separable.","a wider replay corpus and a longer live phase"],
+  const lim=[["Two different accuracies","94.0 percent is core accuracy on grids across all twelve classes. End to end through the pipeline is 98.8, 100 and 98.7 percent on three keywords and silence: no loss in the pipeline, not a better model.","a replay corpus spanning all twelve classes"],
              ["Power is a ratio","Idle residency, not a wattage. No ammeter was used. The firmware side is ready and the absolute current at the IDD jumper is still to be measured.","a DC ammeter in series at the IDD jumper"],
              ["TrustZone is cut","The program plan promised secure world weight isolation in section 6.6. It was cut as separable from the co-optimisation thesis, and the descope is documented rather than glossed over.","a secure world partition behind an NSC veneer"]];
   const cw=3.78, gap=0.28, y=2.4, ch=3.8;

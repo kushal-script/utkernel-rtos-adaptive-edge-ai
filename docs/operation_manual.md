@@ -76,7 +76,7 @@ capture, the parsed numbers, and the figures.
 | `BENCH_TRACE` | Every controller decision, so convergence can be plotted |
 | `BENCH_CONVERGE` | The settled mask and how many deadline misses occurred while converging |
 | `BENCH_STATE` | The learned gate state: VAD threshold, noise floor, blocks seen, active blocks |
-| `BENCH_CONTROL` | Lever usage counts: decisions, demotions, promotions, window resizes sent by mailbox, priority raises |
+| `BENCH_CONTROL` | Lever usage counts: decisions, demotions, promotions, window resizes sent by mailbox, priority raises. Promotions counts every one in the session, the four of the convergence probe and the four climbing back after the pinned INT8 live window, so `promote=8` is the expected reading |
 | `BENCH_PIPELINE` | Whole pipeline counters: inferences, scored, correct, overruns, frames, skipped, resyncs, capture overruns |
 | `BENCH_GRID` | Feature grid restarts, how often the gate closed while a grid was filling |
 | `BENCH_MEMORY` | Peak layer pool use against pool capacity, the `tk_get_mpl` streaming evidence |

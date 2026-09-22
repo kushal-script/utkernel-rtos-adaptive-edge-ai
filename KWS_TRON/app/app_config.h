@@ -40,9 +40,11 @@
    so changing it changes the real time constraint the controller works to. */
 #define T4_INFERENCE_STRIDE  6
 
-/* Active frames the controller may select, the rest of the grid stays zero.
-   The model is trained across this whole range, see docs/adaptation.md. */
-#define T3_ACTIVE_FRAMES_MIN 16
+/* Active frames the controller may select, the rest of the tensor reads as
+   zero. The model is trained from 16 upwards but 16 is not a usable operating
+   point, the context curve puts it under half the full accuracy, so the floor
+   sits where the curve is still flat. See docs/adaptation.md. */
+#define T3_ACTIVE_FRAMES_MIN 32
 #define T3_ACTIVE_FRAMES_MAX KWS_FRAMES
 
 /* ── Voice activity gate ──────────────────────────────────────────────────── */

@@ -9,11 +9,12 @@
 /* T3, the feature stage. Turns the sample stream into the quantised MFCC grid
    the model consumes, and is the stage the feature gate can skip entirely.
 
-   The grid is held in the layout the inference core reads directly, so no
-   copy or rearrangement happens between the two stages. Rows beyond the
-   controller's active frame count are left at the value that represents zero
-   in the model's input space, which is the operating point the model was
-   trained on. See docs/adaptation.md. */
+   The tensor the inference core reads is published from a private sliding
+   history at inference time, in the layout the core consumes directly. When
+   the controller shortens the context, the newest active rows lead the tensor
+   and the rest hold the value that represents zero in the model's input
+   space, which is the operating point the model was trained on. See
+   docs/adaptation.md. */
 
 typedef struct {
     uint32_t frames_computed;
@@ -33,11 +34,19 @@ typedef struct {
 
 extern t3_stats_t t3_stats;
 
-/* Row major, KWS_FRAMES by KWS_COEFFS, already quantised. Oldest row first. */
-extern int8_t t3_feature_grid[KWS_FRAMES * KWS_COEFFS];
+/* The tensor the inference core reads: row major, KWS_FRAMES by KWS_COEFFS,
+   already quantised, oldest row first. It points at one of two buffers and
+   is swapped on publication, so the buffer an inference is reading is never
+   the one being written. */
+extern const int8_t *t3_feature_grid;
+
+/* The corpus position the given published tensor's audio ends at. Takes the
+   pointer the core read, so the answer always belongs to that tensor. */
+uint32_t t3_grid_corpus_end(const int8_t *grid);
 
 void t3_features_task(INT stacd, void *exinf);
 
-/* Rewrites the grid so only `active` rows hold data, the rest read as zero in
-   the model's input space. Called when the controller changes the window. */
+/* Publishes the tensor: the newest `active` rows of the history lead it and
+   the rest read as zero in the model's input space. Called once per
+   inference, immediately before the ready flag is raised. */
 void t3_apply_active_frames(uint32_t active);

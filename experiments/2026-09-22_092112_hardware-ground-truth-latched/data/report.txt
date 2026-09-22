@@ -1,0 +1,128 @@
+DWT 1ms = 500013 cycles
+
+
+microT-Kernel Version 3.00
+
+RTOS coupled adaptive keyword spotting
+T1: capture running, window 256 samples
+BENCH_BEGIN
+BENCH_LIVE fp32 mask=000003ff ms=30000 inferences=179 scored=84 correct=83 idle_ppm=235406 blocks=2194 overruns=0 active=40
+BENCH_LIVE int8 mask=00000000 ms=30000 inferences=172 scored=79 correct=79 idle_ppm=410411 blocks=1971 overruns=0 active=44
+BENCH_LIVE adaptive mask=000000aa ms=30000 inferences=171 scored=79 correct=78 idle_ppm=433431 blocks=1982 overruns=0 active=32
+BENCH int8 mask=00000000 n=150 acc_ppm=940000 mean=24836776 worst=24861540 best=24815709 us=99347
+BENCH_LAYER int8 0 stem 5510084
+BENCH_LAYER int8 1 dw0 2313855
+BENCH_LAYER int8 2 pw0 2492700
+BENCH_LAYER int8 3 dw1 2251576
+BENCH_LAYER int8 4 pw1 2583475
+BENCH_LAYER int8 5 dw2 2248314
+BENCH_LAYER int8 6 pw2 2483251
+BENCH_LAYER int8 7 dw3 2244858
+BENCH_LAYER int8 8 pw3 2490503
+BENCH_LAYER int8 9 fc 3430
+BENCH fp32 mask=000003ff n=150 acc_ppm=940000 mean=31465626 worst=31465761 best=31465481 us=125862
+BENCH_LAYER fp32 0 stem 7450002
+BENCH_LAYER fp32 1 dw0 1554487
+BENCH_LAYER fp32 2 pw0 4235864
+BENCH_LAYER fp32 3 dw1 1554493
+BENCH_LAYER fp32 4 pw1 4331854
+BENCH_LAYER fp32 5 dw2 1554472
+BENCH_LAYER fp32 6 pw2 4339850
+BENCH_LAYER fp32 7 dw3 1554424
+BENCH_LAYER fp32 8 pw3 4236097
+BENCH_LAYER fp32 9 fc 4870
+BENCH adaptive mask=000000aa n=150 acc_ppm=940000 mean=23976970 worst=24002586 best=23956832 us=95907
+BENCH_LAYER adaptive 0 stem 5510098
+BENCH_LAYER adaptive 1 dw0 1554446
+BENCH_LAYER adaptive 2 pw0 2492788
+BENCH_LAYER adaptive 3 dw1 1554470
+BENCH_LAYER adaptive 4 pw1 2583195
+BENCH_LAYER adaptive 5 dw2 1554438
+BENCH_LAYER adaptive 6 pw2 2483145
+BENCH_LAYER adaptive 7 dw3 1554425
+BENCH_LAYER adaptive 8 pw3 2490462
+BENCH_LAYER adaptive 9 fc 3444
+BENCH_COST 0 stem int8=5520799 fp32=7461479 saving=1940680
+BENCH_COST 1 dw0 int8=2323605 fp32=1690243 saving=-633362
+BENCH_COST 2 pw0 int8=2493498 fp32=4372305 saving=1878807
+BENCH_COST 3 dw1 int8=2261781 fp32=1554638 saving=-707143
+BENCH_COST 4 pw1 int8=2584666 fp32=4603154 saving=2018488
+BENCH_COST 5 dw2 int8=2259401 fp32=1554667 saving=-704734
+BENCH_COST 6 pw2 int8=2493294 fp32=4351174 saving=1857880
+BENCH_COST 7 dw3 int8=2244466 fp32=1554574 saving=-689892
+BENCH_COST 8 pw3 int8=2493762 fp32=4509564 saving=2015802
+BENCH_COST 9 fc int8=3432 fp32=4870 saving=1438
+BENCH_ESTIMATE int8=24678704 fp32=31656668 settled=21943573 mask=000000aa
+BENCH_TRACE 168 before=03ff after=03ef act=1 over=1 cycles=32432749 ewma=32432749
+BENCH_TRACE 169 before=03ef after=02ef act=1 over=1 cycles=32432749 ewma=32432749
+BENCH_TRACE 177 before=02ef after=02ee act=1 over=0 cycles=29480711 ewma=32063744
+BENCH_TRACE 185 before=02ee after=02ea act=1 over=0 cycles=26949740 ewma=31424493
+BENCH_TRACE 206 before=02ea after=02aa act=1 over=0 cycles=26246322 ewma=30777222
+BENCH_TRACE 214 before=02aa after=00aa act=1 over=0 cycles=24786839 ewma=30028424
+BENCH_TRACE 223 before=00aa after=00aa act=0 over=0 cycles=24670041 ewma=29358626
+BENCH_TRACE 231 before=00aa after=00aa act=0 over=0 cycles=24663618 ewma=28771750
+BENCH_TRACE 240 before=00aa after=00aa act=0 over=0 cycles=24654617 ewma=28257109
+BENCH_TRACE 249 before=00aa after=00aa act=0 over=0 cycles=24662951 ewma=27807839
+BENCH_TRACE 258 before=00aa after=0000 act=0 over=0 cycles=24658252 ewma=27414141
+BENCH_TRACE 267 before=0000 after=0008 act=2 over=0 cycles=25515896 ewma=27176861
+BENCH_TRACE 276 before=0008 after=0028 act=2 over=0 cycles=25319990 ewma=26944752
+BENCH_TRACE 285 before=0028 after=00a8 act=2 over=0 cycles=25123877 ewma=26717142
+BENCH_TRACE 294 before=00a8 after=00aa act=2 over=0 cycles=24918974 ewma=26492371
+BENCH_TRACE 303 before=00aa after=00aa act=0 over=0 cycles=24664163 ewma=26263845
+BENCH_TRACE 313 before=00aa after=00aa act=0 over=0 cycles=24675533 ewma=26065306
+BENCH_TRACE 322 before=00aa after=00aa act=0 over=0 cycles=24550913 ewma=25876007
+BENCH_TRACE 332 before=00aa after=00aa act=0 over=0 cycles=24680071 ewma=25726515
+BENCH_TRACE 342 before=00aa after=00aa act=0 over=0 cycles=24676873 ewma=25595310
+BENCH_TRACE 353 before=03ff after=03ff act=0 over=1 cycles=32310518 ewma=26434711
+BENCH_TRACE 354 before=03ff after=03ff act=0 over=1 cycles=32310518 ewma=27169187
+BENCH_TRACE 364 before=03ff after=03ff act=0 over=1 cycles=32310196 ewma=27811813
+BENCH_TRACE 365 before=03ff after=03ff act=0 over=1 cycles=32310196 ewma=28374111
+BENCH_TRACE 375 before=03ff after=03ff act=0 over=1 cycles=32304769 ewma=28865444
+BENCH_TRACE 376 before=03ff after=03ff act=0 over=1 cycles=32304769 ewma=29295360
+BENCH_TRACE 387 before=03ff after=03ff act=0 over=1 cycles=32439645 ewma=29688395
+BENCH_TRACE 388 before=03ff after=03ff act=0 over=1 cycles=32439645 ewma=30032301
+BENCH_TRACE 399 before=03ff after=03ff act=0 over=1 cycles=32314554 ewma=30317583
+BENCH_TRACE 400 before=03ff after=03ff act=0 over=1 cycles=32314554 ewma=30567205
+BENCH_TRACE 411 before=03ff after=03ff act=0 over=1 cycles=32439735 ewma=30801271
+BENCH_TRACE 412 before=03ff after=03ff act=0 over=1 cycles=32439735 ewma=31006079
+BENCH_TRACE 423 before=03ff after=03ff act=0 over=1 cycles=32312048 ewma=31169326
+BENCH_TRACE 424 before=03ff after=03ff act=0 over=1 cycles=32312048 ewma=31312167
+BENCH_TRACE 436 before=03ff after=03ff act=0 over=1 cycles=32318709 ewma=31437985
+BENCH_TRACE 437 before=03ff after=03ff act=0 over=1 cycles=32318709 ewma=31548075
+BENCH_TRACE 449 before=03ff after=03ff act=0 over=1 cycles=32443349 ewma=31659984
+BENCH_TRACE 450 before=03ff after=03ff act=0 over=1 cycles=32443349 ewma=31757904
+BENCH_TRACE 461 before=03ff after=03ff act=0 over=1 cycles=32317262 ewma=31827823
+BENCH_TRACE 462 before=03ff after=03ff act=0 over=1 cycles=32317262 ewma=31889003
+BENCH_TRACE 473 before=03ff after=03ff act=0 over=1 cycles=32312537 ewma=31941945
+BENCH_TRACE 474 before=03ff after=03ff act=0 over=1 cycles=32312537 ewma=31988269
+BENCH_TRACE 486 before=03ff after=03ff act=0 over=1 cycles=32443957 ewma=32045230
+BENCH_TRACE 487 before=03ff after=03ff act=0 over=1 cycles=32443957 ewma=32095071
+BENCH_TRACE 499 before=03ff after=03ff act=0 over=1 cycles=32319138 ewma=32123080
+BENCH_TRACE 500 before=03ff after=03ff act=0 over=1 cycles=32319138 ewma=32147587
+BENCH_TRACE 512 before=03ff after=03ff act=0 over=1 cycles=32444782 ewma=32184736
+BENCH_TRACE 513 before=03ff after=03ff act=0 over=1 cycles=32444782 ewma=32217241
+BENCH_TRACE 525 before=03ff after=03ff act=0 over=1 cycles=32315415 ewma=32229512
+BENCH_TRACE 526 before=03ff after=03ff act=0 over=1 cycles=32315415 ewma=32240249
+BENCH_TRACE 537 before=03ff after=03ff act=0 over=1 cycles=31721270 ewma=32175376
+BENCH_TRACE 538 before=03ff after=03ff act=0 over=1 cycles=31721270 ewma=32118612
+BENCH_TRACE 547 before=03ff after=03ff act=0 over=1 cycles=31546980 ewma=32047158
+BENCH_TRACE 548 before=03ff after=03ff act=0 over=1 cycles=31546980 ewma=31984636
+BENCH_TRACE 631 before=03ff after=03ff act=0 over=1 cycles=32432616 ewma=32040634
+BENCH_TRACE 632 before=03ff after=03ff act=0 over=1 cycles=32432616 ewma=32089632
+BENCH_TRACE 641 before=03ff after=03ff act=0 over=1 cycles=32049279 ewma=32084587
+BENCH_TRACE 642 before=03ff after=03ff act=0 over=1 cycles=32049279 ewma=32080173
+BENCH_TRACE 664 before=03ff after=03ff act=0 over=1 cycles=32433042 ewma=32124282
+BENCH_TRACE 665 before=03ff after=03ff act=0 over=1 cycles=32433042 ewma=32162877
+BENCH_TRACE 674 before=03ff after=03ff act=0 over=1 cycles=32307887 ewma=32181003
+BENCH_TRACE 675 before=03ff after=03ff act=0 over=1 cycles=32307887 ewma=32196863
+BENCH_TRACE 684 before=03ff after=03ff act=0 over=1 cycles=32432794 ewma=32226355
+BENCH_TRACE 685 before=03ff after=03ff act=0 over=1 cycles=32432794 ewma=32252160
+BENCH_STATE vad_threshold=224 noise_floor=28 blocks=6471 active=4693
+BENCH_CONTROL decisions=7192 demote=6 promote=8 window=547 pri=1 ewma=24600740
+BENCH_CONVERGE converged=1 mask=000000aa at=342 misses=360 traced=64
+BENCH_PIPELINE inferences=171 scored=79 correct=78 overruns=180 frames=3332 skipped=0 resyncs=47 capture_overruns=0 active=32
+BENCH_GRID restarts=0
+BENCH_CAPTURE waited_ms=4000 blocks=322 rate_per_s=80 expected_per_s=62 window=256 overruns=0
+BENCH_POWER idle_ppm=701026 idle_entries=467 elapsed_ms=4000 idle_cycles_hi=0 idle_cycles_lo=701026806
+BENCH_MEMORY peak_pool_bytes=16384 pool_capacity=20480
+BENCH_END

@@ -132,7 +132,11 @@ void t4_inference_task(INT stacd, void *exinf)
                                     : adapt_state.precision_mask;
         uint32_t deadline = calibrating ? 0u : adapt_state.deadline_cycles;
 
-        kws_infer(t3_feature_grid, mask, deadline, &t4_stats.last);
+        /* One read of the pointer fixes both the tensor and the audio it came
+           from. A publication landing during this inference swaps the pointer
+           for the next tensor, it never touches this one. */
+        const int8_t *grid = t3_feature_grid;
+        kws_infer(grid, mask, deadline, &t4_stats.last);
 
         if (calibrating) {
             uint32_t *slot = (calibration_step == 0) ? t4_cost_table.fp32_cycles
@@ -152,9 +156,10 @@ void t4_inference_task(INT stacd, void *exinf)
             t4_stats.worst_cycles = t4_stats.last.total_cycles;
         }
 
-        /* Score against the clip the grid holds, not the clip the DMA is
-           staging now, which is up to a second ahead of it. */
-        int label = signal_source_label_for_span(t3_stats.grid_corpus_end,
+        /* Score against the clip this tensor holds, not the clip the DMA is
+           staging now, which is up to a second ahead of it, and not the tensor
+           published since, which under a slow configuration is the usual case. */
+        int label = signal_source_label_for_span(t3_grid_corpus_end(grid),
                                                  KWS_GRID_SPAN_SAMPLES);
         t4_stats.last_label = label;
         if (label >= 0) {

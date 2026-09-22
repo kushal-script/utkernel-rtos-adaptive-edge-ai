@@ -41,16 +41,40 @@ identical across every precision configuration.
 **End to end accuracy** is scored on device from replayed audio through capture,
 the gate, feature extraction, and inference. The benchmark holds each
 configuration for a thirty second window with the whole pipeline live, which
-yields 77 to 83 scored classifications per configuration; T3 carries a guard
+yields 79 to 84 scored classifications per configuration; T3 carries a guard
 that restarts the feature grid if the gate closes mid fill, see the gate note
-in [adaptation.md](adaptation.md). The measured point estimates sit
-between 47 and 57 percent, and at this sample size the Wilson intervals of the
-three configurations overlap, so they are **not** statistically separable and no
-configuration is claimed to beat another on this axis. The number is quoted only
-with that qualification: it says the end to end path works and roughly where it
-stands, while core accuracy above remains the right measurement for the
-quantisation and precision switching claim. Widening the sample with a larger
-corpus and longer live windows is future work.
+in [adaptation.md](adaptation.md). Measured in
+`experiments/2026-09-22_092112_hardware-ground-truth-latched`: static FP32 83
+of 84 at 98.8 percent, static INT8 79 of 79 at 100, adaptive 78 of 79 at 98.7.
+
+That it exceeds the core figure is expected and not a contradiction. The core
+figure is scored on 150 grids drawn across all twelve classes; the replay
+corpus holds three keywords and silence. What the end to end figure supports
+is that the pipeline loses nothing between capture and classification, which
+is the property a real time claim needs. Core accuracy remains the right
+measurement for the quantisation and precision switching claim.
+
+Earlier builds reported 47 to 57 percent here and attributed the gap to window
+misalignment. That attribution was wrong. Two defects accounted for it, both
+in how the feature tensor reached the classifier: the active frame lever erased
+the newest rows of the sliding history in place, so a shortened context was the
+second before the word rather than the word, and the ground truth was read
+from a global after the inference, so any configuration whose inference
+outlasts the stride was scored against the audio published after the one it
+saw. The three runs that isolated and fixed them are recorded under
+`experiments/2026-09-22_*`, each with what it changed and what moved.
+
+### Which run backs which figure
+
+Latencies, the per layer cost table, idle residency and the converged mask are
+quoted from `experiments/2026-09-06_220415_hardware-requantise-ub-fixed`, the
+run the desktop program's built in cost table and the demo video derive from.
+End to end accuracy is quoted from
+`experiments/2026-09-22_092112_hardware-ground-truth-latched`. The later run
+reproduces the earlier one's latencies within 0.1 percent, its idle residency
+to the tenth of a percent, and its cost table within 0.4 percent per layer, so
+the two are one measurement for every purpose except the one figure that
+changed.
 
 ## Running it
 

@@ -19,6 +19,15 @@ KWS_PORT=/dev/tty.usbmodemXXXX python tools/flashing/uart_flash.py \
         build/Release/KWS_TRON.bin --erase
 ```
 
+If `jump_bootloader.tcl` fails with `Fail reading CTRL/STAT register`, the
+probe's debug window has degraded, which happens after a handful of OpenOCD
+sessions on some hosts. Reset the probe and try again; the port name may
+change:
+
+```bash
+python tools/flashing/stlink_reset.py
+```
+
 `uart_flash.py` contains no mass erase and no option byte command of any kind,
 so it can only write and verify user flash. Every byte is read back and compared
 before the firmware is started.

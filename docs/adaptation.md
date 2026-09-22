@@ -9,7 +9,7 @@ model. Read [architecture.md](architecture.md) first for the task graph.
 | Knob | Range | Owner | Set by | Effect |
 | :-- | :-- | :-- | :-- | :-- |
 | Capture window | 64 to 256 samples, step 16 | T1 | mailbox from T5 | Samples per DMA half block, so how often the pipeline is woken |
-| Active frames | 16 to 49 | T3 | event flag plus shared state from T5 | How many MFCC frames are computed, the rest of the grid stays zero |
+| Active frames | 32 to 49 | T3 | mailbox message from T5, published by T1 | How much context the model is given, the newest rows lead the tensor and the rest read as zero |
 | Layer precision | INT8 or FP32, per layer | T4 | T5, a cost ranked hill climb over the measured per layer gain, considering both directions on every decision | Cycles and energy per layer against numeric accuracy |
 
 Task priority is a fourth lever. T5 raises T4 with `tk_chg_pri` when a deadline
@@ -28,13 +28,28 @@ arriving and the classifier seeing it, at the cost of more interrupts and more
 context switches. A long window is the opposite. That is a real time trade the
 kernel makes, and it is the trade the mailbox message carries.
 
-The active frame count is how many of the 49 rows T3 actually computes. The
-remaining rows are left at zero. This is only legitimate because the model is
+The active frame count is how much context the model is given: the newest
+`active` of the 49 rows lead the tensor and the rest read as zero. It does not
+reduce the feature work or the inference cost, every frame is still computed
+so the history is intact when the context grows back, and the convolution runs
+over the full tensor either way. What it trades is accuracy for a shorter,
+fresher view of the signal, and it is only legitimate because the model is
 trained for it: training masks a random number of trailing frames on every
 batch, so every value the controller can select is an operating point the model
 has seen, not an input distribution it was never shown. The accuracy cost of
 each setting is measured, not assumed, and the curve is written to
-`plots/context_curve.png` by every training run.
+`plots/context_curve.png` by every training run. The floor is 32 frames, where
+that curve is still flat; 16 is in the training range but costs more than half
+the accuracy, and an earlier build that descended to it while erasing the
+wrong end of the history was one of the two defects behind the gap between
+core and end to end accuracy, see [benchmarking.md](benchmarking.md).
+
+Which end of the history the tensor keeps matters. Training masks the trailing
+frames of a clip, so the model expects the audio in the leading rows. On a
+sliding history the leading rows must therefore be the most recent audio; an
+earlier build zeroed the newest rows in place instead, which discarded the word
+just spoken, kept the second before it, and corrupted the history for the next
+inferences as well.
 
 ## Deviations from the program plan
 
@@ -43,9 +58,10 @@ and the reasoning is recorded here rather than silently changed.
 
 Section 6.1 describes shrinking the window on a flat signal to reduce inference
 frequency. Shrinking the DMA block on its own raises the interrupt rate rather
-than lowering it, so the power saving comes from the active frame count and the
-voice activity gate instead: on a quiet signal T3 computes fewer frames and, at
-the gate, none at all, and the pipeline stops before the model runs. The stated
+than lowering it, so the power saving comes from the voice activity gate: on a
+quiet signal the gate closes, T3 computes nothing,
+and the pipeline stops before the model runs. The active frame count is not a
+power lever, it shortens the context and nothing else. The stated
 goal of the section, less work and less power on flat input, is what the
 implementation delivers.
 

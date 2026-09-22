@@ -201,8 +201,8 @@ static void report_run(const device_costs_t *costs, unsigned elapsed_s)
         printf("                This is one short run across every mask the\n");
         printf("                controller visited, not a per configuration\n");
         printf("                figure. The board's pinned thirty second\n");
-        printf("                windows give 47 to 57 percent with the three\n");
-        printf("                configurations not separable, see README.md.\n");
+        printf("                windows give 98.8, 100 and 98.7 percent for\n");
+        printf("                FP32, INT8 and adaptive, see README.md.\n");
     } else {
         printf("  Scored        nothing, the source carries no ground truth\n");
     }

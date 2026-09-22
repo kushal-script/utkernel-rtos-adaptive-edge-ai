@@ -137,13 +137,14 @@ void bench_task(INT stacd, void *exinf)
 
         uint64_t live_idle = bsp_idle_cycles() - live_idle0;
         uint64_t live_elapsed = (uint64_t)BENCH_LIVE_MS * (SYSTEM_CLOCK_HZ / 1000u);
-        tm_printf((UB *)"BENCH_LIVE %s mask=%08x ms=%u inferences=%u scored=%u correct=%u idle_ppm=%u blocks=%u overruns=%u\n",
+        tm_printf((UB *)"BENCH_LIVE %s mask=%08x ms=%u inferences=%u scored=%u correct=%u idle_ppm=%u blocks=%u overruns=%u active=%u\n",
                   live_configs[c].name, (unsigned)adapt_state.precision_mask,
                   (unsigned)BENCH_LIVE_MS, (unsigned)t4_stats.inferences,
                   (unsigned)t4_stats.scored, (unsigned)t4_stats.correct,
                   (unsigned)((live_idle * 1000000u) / live_elapsed),
                   (unsigned)(signal_source_block_count() - live_blocks0),
-                  (unsigned)(signal_source_overruns() - live_ov0));
+                  (unsigned)(signal_source_overruns() - live_ov0),
+                  (unsigned)adapt_state.active_frames);
     }
     adapt_state.pin_precision = 0;
 
@@ -213,11 +214,12 @@ void bench_task(INT stacd, void *exinf)
               (unsigned)t5_stats.converged, (unsigned)t5_stats.converged_mask,
               (unsigned)t5_stats.converged_at, (unsigned)t5_stats.deadline_misses,
               (unsigned)t5_trace_count);
-    tm_printf((UB *)"BENCH_PIPELINE inferences=%u scored=%u correct=%u overruns=%u frames=%u skipped=%u resyncs=%u capture_overruns=%u\n",
+    tm_printf((UB *)"BENCH_PIPELINE inferences=%u scored=%u correct=%u overruns=%u frames=%u skipped=%u resyncs=%u capture_overruns=%u active=%u\n",
               (unsigned)t4_stats.inferences, (unsigned)t4_stats.scored,
               (unsigned)t4_stats.correct, (unsigned)t4_stats.overruns,
               (unsigned)t3_stats.frames_computed, (unsigned)t3_stats.frames_skipped,
-              (unsigned)t3_stats.resyncs, (unsigned)signal_source_overruns());
+              (unsigned)t3_stats.resyncs, (unsigned)signal_source_overruns(),
+              (unsigned)adapt_state.active_frames);
     tm_printf((UB *)"BENCH_GRID restarts=%u\n", (unsigned)t3_stats.grid_restarts);
     tm_printf((UB *)"BENCH_CAPTURE waited_ms=%u blocks=%u rate_per_s=%u expected_per_s=%u window=%u overruns=%u\n",
               (unsigned)waited_ms, (unsigned)blocks_seen_total,
