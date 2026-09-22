@@ -145,6 +145,11 @@ def emit_model_header(layers, labels, cfg: FeatureConfig, channels: int) -> str:
    so a wider model fails the build rather than overflowing at run time. */
 #define KWS_FOLDED_SLOTS_REQUIRED {_folded_slots(layers)}
 
+/* Per kernel row weight sum slots for padded convolutions, one per output
+   channel per kernel row. They let border windows take the folded path.
+   Checked the same way, by _Static_assert in kws_infer.c. */
+#define KWS_ROWSUM_SLOTS_REQUIRED {_rowsum_slots(layers)}
+
 extern const kws_layer_t kws_layers[KWS_NUM_LAYERS];
 extern const char *const kws_labels[KWS_NUM_CLASSES];
 
@@ -166,6 +171,14 @@ def _folded_slots(layers):
     """
     return sum(int(layer.out_shape[2]) for layer in layers
                if layer.kind != DEPTHWISE)
+
+
+def _rowsum_slots(layers):
+    """Slots the clipped window path needs: out_c times kernel_h for every
+    padded convolution. Mirrors fold_bias_tables in KWS_TRON/audio/kws_infer.c.
+    """
+    return sum(int(layer.out_shape[2]) * int(layer.kernel[0]) for layer in layers
+               if layer.kind == CONV and (layer.padding[0] or layer.padding[1]))
 
 
 def _max_tensor(layers):

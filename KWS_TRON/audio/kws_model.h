@@ -22,6 +22,11 @@
    so a wider model fails the build rather than overflowing at run time. */
 #define KWS_FOLDED_SLOTS_REQUIRED 332
 
+/* Per kernel row weight sum slots for padded convolutions, one per output
+   channel per kernel row. They let border windows take the folded path.
+   Checked the same way, by _Static_assert in kws_infer.c. */
+#define KWS_ROWSUM_SLOTS_REQUIRED 640
+
 extern const kws_layer_t kws_layers[KWS_NUM_LAYERS];
 extern const char *const kws_labels[KWS_NUM_CLASSES];
 

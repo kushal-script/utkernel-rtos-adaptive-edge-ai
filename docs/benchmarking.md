@@ -23,8 +23,8 @@ through one was wrong.
 
 The mechanism now exists: the kernel idle hook sleeps rather than spinning, and
 with the whole pipeline live over identical thirty second windows the core is
-asleep 43.3 percent of wall time in the adaptive configuration against 41.0 for
-static INT8 and 23.5 for static FP32. Average current itself still needs a
+asleep 49.8 percent of wall time in the adaptive configuration against 42.5 for
+static INT8 and 23.6 for static FP32. Average current itself still needs a
 meter. See [power.md](power.md).
 
 ### Accuracy
@@ -41,11 +41,11 @@ identical across every precision configuration.
 **End to end accuracy** is scored on device from replayed audio through capture,
 the gate, feature extraction, and inference. The benchmark holds each
 configuration for a thirty second window with the whole pipeline live, which
-yields 79 to 84 scored classifications per configuration; T3 carries a guard
+yields 77 to 91 scored classifications per configuration; T3 carries a guard
 that restarts the feature grid if the gate closes mid fill, see the gate note
-in [adaptation.md](adaptation.md). Measured in
-`experiments/2026-09-22_092112_hardware-ground-truth-latched`: static FP32 83
-of 84 at 98.8 percent, static INT8 79 of 79 at 100, adaptive 78 of 79 at 98.7.
+in [adaptation.md](adaptation.md). Measured in the canonical run: static FP32
+90 of 91 at 98.9 percent, static INT8 82 of 83 at 98.8, adaptive 77 of 77 at
+100.
 
 That it exceeds the core figure is expected and not a contradiction. The core
 figure is scored on 150 grids drawn across all twelve classes; the replay
@@ -64,17 +64,14 @@ outlasts the stride was scored against the audio published after the one it
 saw. The three runs that isolated and fixed them are recorded under
 `experiments/2026-09-22_*`, each with what it changed and what moved.
 
-### Which run backs which figure
+### The run every figure comes from
 
-Latencies, the per layer cost table, idle residency and the converged mask are
-quoted from `experiments/2026-09-06_220415_hardware-requantise-ub-fixed`, the
-run the desktop program's built in cost table and the demo video derive from.
-End to end accuracy is quoted from
-`experiments/2026-09-22_092112_hardware-ground-truth-latched`. The later run
-reproduces the earlier one's latencies within 0.1 percent, its idle residency
-to the tenth of a percent, and its cost table within 0.4 percent per layer, so
-the two are one measurement for every purpose except the one figure that
-changed.
+Every published number, the latencies, the per layer cost table, idle
+residency, the converged mask and end to end accuracy, is quoted from one run,
+`experiments/2026-09-22_094445_hardware-stem-border-and-vcvtr`. The desktop
+program's built in cost table, the slide figures and the demo video derive
+from the same capture. Its notes record what changed against the run it
+superseded and why each figure moved.
 
 ## Running it
 

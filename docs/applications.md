@@ -8,13 +8,18 @@ measured rather than asserted.
 
 The measurements behind it are in
 [experiments/2026-09-06_225144_hardware-nodsp-kernel-counterfactual](../experiments/2026-09-06_225144_hardware-nodsp-kernel-counterfactual/notes.md).
+That experiment compared two builds of its own date. The kernel changes made
+since, the stem's border windows taking the folded path and FPU rounding at
+precision boundaries, touch neither the depthwise layers nor the packed path
+the experiment removed, so its finding stands; the current per layer figures
+are in the canonical run named in [benchmarking.md](benchmarking.md).
 
 ## The finding that generalises
 
 The result is not that adaptive beats static. It is that **the best
 configuration was mixed and counter intuitive, and only measurement found it.**
 The universal prior is that INT8 is faster than FP32. On this part that is false
-for four of the ten layers, by 43 percent, and a compile time decision, which is
+for four of the ten layers, by 40 percent, and a compile time decision, which is
 what essentially every TinyML deployment makes today, would have been wrong in a
 direction nobody would think to check.
 

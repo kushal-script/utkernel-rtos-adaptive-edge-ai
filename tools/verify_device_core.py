@@ -73,6 +73,45 @@ int main(int argc, char **argv){
 """
 
 
+STEM_HARNESS = r"""
+#include <stdio.h>
+#include <string.h>
+#include "kws_model.h"
+#include "kws_kernels.h"
+#include "eval_set.h"
+/* The padded convolution both ways over every evaluation grid: the clipped
+   window path with the folded and row sum tables, and the original bounds
+   checked path with neither. They must agree to the byte. */
+int main(void){
+    const kws_layer_t *L = &kws_layers[0];
+    static int32_t folded[4096], rowsum[4096];
+    static int8_t fast[65536], ref[65536];
+    unsigned row_len = (unsigned)L->kernel_w * L->in_c, per = (unsigned)L->kernel_h * row_len;
+    unsigned out_n = (unsigned)L->out_h * L->out_w * L->out_c;
+    if (L->out_c > 4096 || (unsigned)L->out_c * L->kernel_h > 4096 || out_n > 65536) { fprintf(stderr, "harness too small\n"); return 2; }
+    for (unsigned oc = 0; oc < L->out_c; oc++) {
+        int32_t sum = 0;
+        for (unsigned k = 0; k < per; k++) sum += L->weight_int8[oc * per + k];
+        folded[oc] = L->bias_int32[oc] + L->input_offset * sum;
+        for (unsigned kh = 0; kh < L->kernel_h; kh++) {
+            int32_t rs = 0;
+            for (unsigned k = 0; k < row_len; k++) rs += L->weight_int8[(oc * L->kernel_h + kh) * row_len + k];
+            rowsum[oc * L->kernel_h + kh] = rs;
+        }
+    }
+    unsigned bad = 0;
+    for (int s = 0; s < EVAL_SAMPLE_COUNT; s++) {
+        const int8_t *g = &eval_features[(size_t)s * EVAL_ELEMS_PER_SAMPLE];
+        kws_conv_int8(L, g, L->weight_int8, L->bias_int32, folded, rowsum, fast);
+        kws_conv_int8(L, g, L->weight_int8, L->bias_int32, NULL, NULL, ref);
+        if (memcmp(fast, ref, out_n) != 0) bad++;
+    }
+    printf("%u %d\n", bad, EVAL_SAMPLE_COUNT);
+    return 0;
+}
+"""
+
+
 def compile_harness(work: Path, name: str, source: str, extra: list) -> Path:
     src = work / f"{name}.c"
     src.write_text(source)
@@ -186,6 +225,25 @@ def check_inference(work: Path) -> bool:
     return ok
 
 
+def check_stem_border(work: Path) -> bool:
+    """The clipped window path of the padded convolution against the plain path.
+
+    Accuracy cannot catch a one bit difference here, so this compares the stem's
+    int8 output byte for byte over the whole evaluation set.
+    """
+    binary = compile_harness(
+        work, "stem_check", STEM_HARNESS, ["kws_kernels.c", "kws_model.c", "eval_set.c"],
+    )
+    out = subprocess.run([str(binary)], capture_output=True, text=True)
+    if out.returncode != 0:
+        print(f"  stem border path   harness error: {out.stderr.strip()}   FAIL")
+        return False
+    bad, total = (int(v) for v in out.stdout.split())
+    ok = bad == 0
+    print(f"  stem border path     {total - bad}/{total} grids byte identical   {'pass' if ok else 'FAIL'}")
+    return ok
+
+
 def main() -> int:
     for required in ("kws_model.c", "eval_set.c", "kws_infer.c"):
         if not (AUDIO / required).exists():
@@ -198,6 +256,7 @@ def main() -> int:
         passed = check_transform(work)
         passed = check_features(work) and passed
         passed = check_inference(work) and passed
+        passed = check_stem_border(work) and passed
 
     print("all checks passed" if passed else "FAILURES, see above")
     return 0 if passed else 1

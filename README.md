@@ -18,9 +18,9 @@ with knowledge of the measured costs:
 
 | Configuration | Latency | 120 ms deadline | Core accuracy | Core idle |
 | :-- | --: | :-- | --: | --: |
-| FP32 static | 126.0 ms | missed | 94.0 percent | 23.5 percent |
-| INT8 static | 99.3 ms | met | 94.0 percent | 41.0 percent |
-| **Adaptive** | **95.9 ms** | **met** | **94.0 percent** | **43.3 percent** |
+| FP32 static | 126.7 ms | missed | 94.0 percent | 23.6 percent |
+| INT8 static | 93.4 ms | met | 94.0 percent | 42.5 percent |
+| **Adaptive** | **86.1 ms** | **met** | **94.0 percent** | **49.8 percent** |
 
 The adaptive point is faster than the best static compile, not a compromise
 between the two. It is a mixed precision mask no single precision build can
@@ -29,9 +29,10 @@ express, and the controller finds it from measurements it takes itself.
 The controller calibrates on its first two inferences, measuring what every
 layer costs in each precision on this silicon, then ranks layers by that
 measurement rather than by index. On this part the four depthwise layers are
-together 43 percent slower in INT8, between 37 and 45 percent depending on the
+together 40 percent slower in INT8, between 33 and 45 percent depending on the
 layer, because their kernels are scalar while every
-other layer uses packed multiply accumulate, so the cost optimum is mixed. From
+other layer uses packed multiply accumulate and is 44 percent faster, so the
+cost optimum is mixed. From
 full FP32 the controller reaches it in six cost reducing demotions; restarted
 from all INT8 it climbs back to the same mask in four promotions. Converging to
 the same operating point from both extremes is what makes it a property of the
@@ -41,8 +42,8 @@ Two accuracy figures are reported and they are not the same measurement. The
 94.0 percent above is **core accuracy on pre computed feature grids**, which
 exercises the inference core and nothing upstream of it. End to end accuracy,
 through capture, the gate, features, and inference, is scored separately on
-device over the live thirty second windows: 79 to 84 classifications per
-configuration, **98.8 percent for static FP32, 100 for static INT8 and 98.7
+device over the live thirty second windows: 77 to 91 classifications per
+configuration, **98.9 percent for static FP32, 98.8 for static INT8 and 100
 adaptive**. It is higher than the core figure because the replay corpus holds
 three keywords and silence, an easier task than the twelve class evaluation
 set, so what it establishes is that nothing is lost between capture and
@@ -55,8 +56,8 @@ Power now has a mechanism as well as a number. The kernel idle hook shipped as
 an empty function, so the idle task spun at 250 MHz and no amount of gating work
 upstream could ever show up as power. It now sleeps, and with all three
 configurations driving the whole pipeline over identical thirty second windows
-the core is asleep 43.3 percent of the time adaptive against 23.5 percent for
-static FP32, a factor of **1.84**, and above static INT8's 41.0 percent. That ratio is the claim; it is deliberately
+the core is asleep 49.8 percent of the time adaptive against 23.6 percent for
+static FP32, a factor of **2.11**, and above static INT8's 42.5 percent. That ratio is the claim; it is deliberately
 not converted to milliwatts, and [docs/power.md](docs/power.md) explains why.
 
 The capture chain drops nothing. Earlier reports of thousands of dropped blocks
@@ -72,7 +73,7 @@ producing; with the producer paused too, the live phase overrun count is zero.
 | INT8 kernels | Packed SMLAD with folded offsets, 1.22 times faster than FP32 |
 | Adaptation controller | Converges to the same mask from both extremes, beats every static build |
 | Trained model | 92.8 percent on twelve class Speech Commands, 23,180 parameters |
-| Power | Idle sleep implemented, adaptive leaves the core asleep 1.84 times as long as FP32 |
+| Power | Idle sleep implemented, adaptive leaves the core asleep 2.11 times as long as FP32 |
 | Capture | Zero dropped blocks over a live run, block rate matches the timer pacing |
 
 ## The signal source, and why there is no microphone in the loop

@@ -160,18 +160,18 @@ def build():
     img, d = frame()
     header(d, "on hardware")
     d.text((W / 2, 190), "Faster than either static build", font=F_BIG, fill=WHITE, anchor="mm")
-    bars = [("static FP32", 126.0, (192, 57, 43), "misses the 120 ms deadline"),
-            ("static INT8", 99.3, NAVY, "meets it"),
-            ("adaptive", 95.9, AMBER, "meets it, with the most margin")]
+    bars = [("static FP32", 126.7, (192, 57, 43), "misses the 120 ms deadline"),
+            ("static INT8", 93.4, NAVY, "meets it"),
+            ("adaptive", 86.1, AMBER, "meets it, with the most margin")]
     for i, (name, ms, col, note) in enumerate(bars):
         y = 270 + i * 92
         d.text((300, y + 22), name, font=F_BODY, fill=ICE, anchor="ra")
-        width = int(ms / 126.0 * 620)
+        width = int(ms / 126.7 * 620)
         d.rounded_rectangle([330, y, 330 + width, y + 46], 6, fill=col)
         d.text((330 + width + 16, y + 22), f"{ms:.1f} ms", font=F_BODY,
                fill=WHITE, anchor="lm")
         d.text((330, y + 62), note, font=F_SMALL, fill=MID)
-    dl = 330 + int(120.0 / 126.0 * 620)
+    dl = 330 + int(120.0 / 126.7 * 620)
     d.line([dl, 250, dl, 560], fill=WHITE, width=2)
     d.text((dl, 236), "120 ms deadline", font=F_SMALL, fill=WHITE, anchor="mm")
     hold(frames, img, 5.0)

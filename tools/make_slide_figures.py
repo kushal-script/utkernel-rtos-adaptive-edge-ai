@@ -92,6 +92,12 @@ def convergence(text: str):
             for m in re.finditer(
                 r"BENCH_TRACE (\d+) before=(\w+) after=(\w+) act=(\d+) over=(\d+) cycles=(\d+)", text)]
     rows.sort()
+    # The trace runs on into the benchmark's pinned live windows, where the
+    # controller is held and every row is the pinned configuration's cost. The
+    # walk ends where the controller declared convergence, so the figure does.
+    at = re.search(r"BENCH_CONVERGE converged=1 mask=\S+ at=(\d+)", text)
+    if at:
+        rows = [r for r in rows if r[0] <= int(at.group(1))]
     step = list(range(1, len(rows) + 1))
     ms = [r[5] / 250000 for r in rows]
 

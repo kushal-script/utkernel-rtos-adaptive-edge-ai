@@ -18,17 +18,44 @@ static float arena_b[KWS_MAX_TENSOR_ELEMS];
 static int32_t folded_store[KWS_FOLDED_SLOTS];
 _Static_assert(KWS_FOLDED_SLOTS >= KWS_FOLDED_SLOTS_REQUIRED,
                "folded_store is too small for this model, raise KWS_FOLDED_SLOTS");
+
+/* Per kernel row weight sums for padded convolutions, rowsum[oc][kh]. They
+   let a window that overlaps the padding take the folded path too, by
+   subtracting the weights of the taps that fall outside. Only the stem pads,
+   so only the stem takes slots. */
+#define KWS_ROWSUM_SLOTS 640
+static int32_t rowsum_store[KWS_ROWSUM_SLOTS];
+static const int32_t *layer_rowsum[KWS_NUM_LAYERS];
+_Static_assert(KWS_ROWSUM_SLOTS >= KWS_ROWSUM_SLOTS_REQUIRED,
+               "rowsum_store is too small for this model, raise KWS_ROWSUM_SLOTS");
 static const int32_t *layer_folded[KWS_NUM_LAYERS];
 static uint8_t folded_ready;
 
 static void fold_bias_tables(void)
 {
     int32_t *slot = folded_store;
+    int32_t *rslot = rowsum_store;
     for (uint32_t i = 0; i < KWS_NUM_LAYERS; i++) {
         const kws_layer_t *layer = &kws_layers[i];
+        layer_rowsum[i] = NULL;
         if (layer->kind == KWS_LAYER_DEPTHWISE) {
             layer_folded[i] = NULL;
             continue;
+        }
+        if (layer->kind == KWS_LAYER_CONV && (layer->pad_h || layer->pad_w)) {
+            uint32_t row_len = (uint32_t)layer->kernel_w * layer->in_c;
+            for (uint32_t oc = 0; oc < layer->out_c; oc++) {
+                for (uint32_t kh = 0; kh < layer->kernel_h; kh++) {
+                    const int8_t *w = &layer->weight_int8[(oc * layer->kernel_h + kh) * row_len];
+                    int32_t sum = 0;
+                    for (uint32_t k = 0; k < row_len; k++) {
+                        sum += w[k];
+                    }
+                    rslot[oc * layer->kernel_h + kh] = sum;
+                }
+            }
+            layer_rowsum[i] = rslot;
+            rslot += (uint32_t)layer->out_c * layer->kernel_h;
         }
         uint32_t per_filter = layer->kind == KWS_LAYER_FULLY_CONNECTED
                                   ? layer->in_c
@@ -161,7 +188,7 @@ void kws_infer(const int8_t *feature_grid, uint32_t precision_mask,
             default:
                 kws_conv_int8(layer, (const int8_t *)current, w,
                               layer->bias_int32, layer_folded[index],
-                              (int8_t *)spare);
+                              layer_rowsum[index], (int8_t *)spare);
                 break;
             }
         } else {

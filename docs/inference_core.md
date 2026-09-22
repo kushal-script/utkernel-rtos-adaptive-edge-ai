@@ -135,9 +135,17 @@ the input offset into precomputed per channel accumulators and running the
 contiguous layers as packed SXTB16 and SMLAD pairs, bit identical arithmetic
 checked against the golden reference, brought INT8 to 102.6 against FP32's
 125.1 ms in that run, a measured 1.22 times advantage. Those are the figures of
-the run that established the mechanism; the current build measures 99.3 against
-126.0 ms, a 1.27 times advantage, see the README. The depthwise layers remain scalar,
-their samples are not contiguous, and they are the obvious next target.
+the run that established the mechanism; the current build measures 93.4 against
+126.7 ms, a 1.36 times advantage, see the README. The depthwise layers remain
+scalar because their samples are not contiguous, and they are deliberately
+left so: the counterfactual in [applications.md](applications.md) shows that
+making them cheaper in INT8 collapses the mixed optimum to plain INT8, which
+would delete the result the controller exists to find. Two later changes to
+the other kernels are recorded in the canonical run's notes: the stem's border
+windows now take the folded path, and rounding at precision boundaries uses
+the FPU's `VCVTR` rather than a software `lrintf`. Both are bit identical, the
+first checked byte for byte over the evaluation set by
+`tools/verify_device_core.py`.
 
 One more measured truth: a precision boundary conversion is real work, roughly
 a quarter of a million cycles when eight thousand activations cross a

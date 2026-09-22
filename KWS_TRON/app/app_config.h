@@ -68,8 +68,8 @@
    behind permanently. Deriving it this way is what makes it a real time
    constraint instead of a number picked with knowledge of the answer.
 
-   At a stride of 6 the period is 120 ms. Static FP32 at 126.0 ms misses it,
-   static INT8 at 99.3 ms meets it, and the adaptive point at 95.9 ms meets it
+   At a stride of 6 the period is 120 ms. Static FP32 at 126.7 ms misses it,
+   static INT8 at 93.4 ms meets it, and the adaptive point at 86.1 ms meets it
    with the most margin, so the constraint is one the configurations genuinely
    differ on. */
 #define SYSTEM_CLOCK_HZ      250000000u

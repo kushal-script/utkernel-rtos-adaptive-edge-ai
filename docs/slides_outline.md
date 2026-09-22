@@ -61,9 +61,9 @@ native kernel primitive.
 
 | Configuration | Latency | 120 ms deadline | Core idle |
 | :-- | --: | :-- | --: |
-| Static FP32 | 126.0 ms | missed | 23.5 percent |
-| Static INT8 | 99.3 ms | met | 41.0 percent |
-| **Adaptive** | **95.9 ms** | **met** | **43.3 percent** |
+| Static FP32 | 126.7 ms | missed | 23.6 percent |
+| Static INT8 | 93.4 ms | met | 42.5 percent |
+| **Adaptive** | **86.1 ms** | **met** | **49.8 percent** |
 
 The adaptive point is **faster than either static build**, not a compromise
 between them. The deadline is the classification period itself, derived from the
@@ -75,10 +75,10 @@ inference stride, not chosen after seeing the costs.
 
 Measured on this silicon, per layer:
 
-* the four depthwise layers are together **43 percent slower in INT8** than in
-  FP32, between 37 and 45 percent depending on the layer, because their samples
+* the four depthwise layers are together **40 percent slower in INT8** than in
+  FP32, between 33 and 45 percent depending on the layer, because their samples
   are not contiguous and their kernels are still scalar
-* every other layer is **38 percent faster in INT8**, running packed SXTB16 and
+* every other layer is **44 percent faster in INT8**, running packed SXTB16 and
   SMLAD pairs
 * the fully connected layer is a few thousand cycles either way, invisible next
   to the rest
@@ -126,8 +126,8 @@ jumper.
   reported, including the deadline misses during it, rather than only the
   settled average.
 * **Power.** The kernel idle hook was an empty function; it now sleeps. Core
-  measured asleep 43.3 percent of wall time adaptive against 23.5 percent FP32,
-  a factor of 1.84 on identical audio, and above static INT8 at 41.0 percent.
+  measured asleep 49.8 percent of wall time adaptive against 23.6 percent FP32,
+  a factor of 2.11 on identical audio, and above static INT8 at 42.5 percent.
 * **Footprint.** 460 KB flash, 117 KB of 272 KB SRAM, per layer weight streaming
   through `tk_get_mpl` with peak pool use of 16 KB measured.
 
@@ -146,7 +146,7 @@ disagreement is therefore a hardware question, never an open one.
 **10. What is not claimed**
 
 * Core accuracy 94.0 percent is measured on **pre computed feature grids**
-  across all twelve classes. End to end accuracy, 98.8, 100 and 98.7 percent,
+  across all twelve classes. End to end accuracy, 98.9, 98.8 and 100 percent,
   is measured on a replay corpus of **three keywords and silence**, so it shows
   the pipeline loses nothing, not that it beats the model.
 * Power is an **idle residency ratio**, not a wattage. No ammeter was used.

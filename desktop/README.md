@@ -69,7 +69,7 @@ capture the costs come from is named in the output of every command.
 
 **No power figure is produced.** The board measures idle residency by counting
 cycles spent in `WFI`. A desktop scheduler idle fraction has no relationship to
-the published 23.5, 41.0 and 43.3 percent, so nothing is reported rather than
+the published 23.6, 42.5 and 49.8 percent, so nothing is reported rather than
 something a reader would take as comparable.
 
 **The mask costs are rankings, not latencies.** The per layer table excludes the

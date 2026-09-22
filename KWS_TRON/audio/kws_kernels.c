@@ -62,6 +62,27 @@ int32_t kws_requantise(int32_t accumulator, int32_t multiplier, int32_t shift)
     return (int32_t)value;
 }
 
+/* Round to nearest even, the rounding lrintf performs under the default
+   floating point environment. On the Cortex-M33 FPU that is one VCVTR
+   instruction; the newlib lrintf the compiler otherwise calls is a software
+   routine of about thirty cycles, and this runs once per element at every
+   precision boundary, so the difference is milliseconds per mixed inference.
+   Both produce the same integer for every value in range, and every caller
+   here clamps to int8 straight after. */
+#if defined(__arm__) && defined(__ARM_FP) && (__ARM_FP & 4)
+static inline int32_t round_to_int(float value)
+{
+    int32_t out;
+    __asm__ ("vcvtr.s32.f32 %0, %1" : "=t"(out) : "t"(value));
+    return out;
+}
+#else
+static inline int32_t round_to_int(float value)
+{
+    return (int32_t)lrintf(value);
+}
+#endif
+
 static inline int32_t clamp(int32_t value, int32_t low, int32_t high)
 {
     if (value < low) {
@@ -72,7 +93,8 @@ static inline int32_t clamp(int32_t value, int32_t low, int32_t high)
 
 void kws_conv_int8(const kws_layer_t *layer, const int8_t *input,
                    const int8_t *weights, const int32_t *bias,
-                   const int32_t *folded, int8_t *output)
+                   const int32_t *folded, const int32_t *rowsum,
+                   int8_t *output)
 {
     const int32_t in_h = layer->in_h, in_w = layer->in_w, in_c = layer->in_c;
     const int32_t out_h = layer->out_h, out_w = layer->out_w, out_c = layer->out_c;
@@ -96,6 +118,42 @@ void kws_conv_int8(const kws_layer_t *layer, const int8_t *input,
                     for (int32_t kh = 0; kh < kh_n; kh++) {
                         const int8_t *in_row = &input[((ih0 + kh) * in_w + iw0) * in_c];
                         acc = dot_run(in_row, &wt[kh * row_len], row_len, acc);
+                    }
+                } else if (folded != NULL && rowsum != NULL) {
+                    /* Window partly outside the input. Padding reads as zero
+                       in real space, so a tap outside contributes nothing,
+                       but the folded term pre added input_offset times every
+                       tap's weight, so the weights of the missing taps are
+                       taken back out. The taps inside then run as the same
+                       contiguous dot products the whole window case uses.
+                       Bit identical to the plain path: the same integers,
+                       regrouped. */
+                    const int32_t kh_lo = ih0 < 0 ? -ih0 : 0;
+                    const int32_t kh_hi = ih0 + kh_n > in_h ? in_h - ih0 : kh_n;
+                    const int32_t kw_lo = iw0 < 0 ? -iw0 : 0;
+                    const int32_t kw_hi = iw0 + kw_n > in_w ? in_w - iw0 : kw_n;
+                    const int8_t  *wt = &weights[oc * kh_n * row_len];
+                    const int32_t *rs = &rowsum[oc * kh_n];
+                    int32_t missing = 0;
+                    for (int32_t kh = 0; kh < kh_n; kh++) {
+                        if (kh < kh_lo || kh >= kh_hi) {
+                            missing += rs[kh];
+                            continue;
+                        }
+                        const int8_t *wrow = &wt[kh * row_len];
+                        for (int32_t k = 0; k < kw_lo * in_c; k++) {
+                            missing += wrow[k];
+                        }
+                        for (int32_t k = kw_hi * in_c; k < row_len; k++) {
+                            missing += wrow[k];
+                        }
+                    }
+                    acc = folded[oc] - layer->input_offset * missing;
+                    for (int32_t kh = kh_lo; kh < kh_hi; kh++) {
+                        const int8_t *in_row =
+                            &input[((ih0 + kh) * in_w + iw0 + kw_lo) * in_c];
+                        acc = dot_run(in_row, &wt[kh * row_len + kw_lo * in_c],
+                                      (kw_hi - kw_lo) * in_c, acc);
                     }
                 } else {
                     acc = bias[oc];
@@ -281,7 +339,7 @@ void kws_avgpool_int8(const int8_t *input, int8_t *output,
             sum += input[i * channels + c];
         }
         float mean = (float)sum / (float)count;
-        int32_t rounded = (int32_t)lrintf(mean);
+        int32_t rounded = round_to_int(mean);
         output[c] = (int8_t)clamp(rounded, -128, 127);
     }
 }
@@ -317,7 +375,7 @@ void kws_quantise(const float *input, int8_t *output, uint32_t count,
        every precision boundary, so it is the dominant cost of a mixed mask. */
     const float inv_scale = 1.0f / scale;
     for (uint32_t i = 0; i < count; i++) {
-        int32_t q = (int32_t)lrintf(input[i] * inv_scale) + zero_point;
+        int32_t q = round_to_int(input[i] * inv_scale) + zero_point;
         output[i] = (int8_t)clamp(q, -128, 127);
     }
 }
