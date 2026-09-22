@@ -185,10 +185,11 @@ void t5_controller_task(INT stacd, void *exinf)
         quiet_run = 0;
         set_feature_gate(false);
 
-        /* T4 raises the overrun flag and the done flag for the same inference.
-           Treating them as two events would demote a layer and then promote it
-           straight back, so an overrun is handled once and the done flag is
-           ignored when it arrives alongside one. */
+        /* T4 raises the overrun flag and the done flag for the same inference
+           in one call, so they always arrive together and a late inference is
+           one decision. Raised separately, this task would wake between them,
+           the cost would still read as over on the second wake, and one miss
+           would be counted twice. */
         if (pattern & (FLG_INFERENCE_DONE | FLG_BUDGET_EXCEEDED)) {
             /* Learn the cost of an inference as an exponential mean, so the
                controller reacts to the machine it is actually running on. */

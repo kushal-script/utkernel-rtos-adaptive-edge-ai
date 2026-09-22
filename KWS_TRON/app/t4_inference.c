@@ -169,11 +169,14 @@ void t4_inference_task(INT stacd, void *exinf)
             }
         }
 
+        /* Both bits in one call. The controller outranks this task, so two
+           calls would let it wake between them and count one late inference
+           as two decisions and two misses. */
+        UINT done = FLG_INFERENCE_DONE;
         if (t4_stats.last.overran) {
             t4_stats.overruns++;
-            tk_set_flg(flgid_control, FLG_BUDGET_EXCEEDED);
+            done |= FLG_BUDGET_EXCEEDED;
         }
-
-        tk_set_flg(flgid_control, FLG_INFERENCE_DONE);
+        tk_set_flg(flgid_control, done);
     }
 }
