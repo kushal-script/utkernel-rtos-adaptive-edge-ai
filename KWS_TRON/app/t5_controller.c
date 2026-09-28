@@ -19,15 +19,12 @@ uint32_t t5_trace_count;
 
 uint32_t t5_trace_capacity(void) { return BENCH_HISTORY; }
 
-/* Window resize messages are sent from a small rotating pool, because a
-   mailbox message must stay valid until the receiver has taken it. */
+/* Resize messages come from a rotating pool, a message must stay valid until received. */
 #define WINDOW_MSG_SLOTS 4
 static window_msg_t window_msgs[WINDOW_MSG_SLOTS];
 static uint32_t window_msg_next;
 
-/* Energy ratio corresponding to T2_VAD_MARGIN_DB, held as a fixed factor so
-   the gate needs no logarithm on the hot path. Nine decibels is a factor of
-   about eight in power. */
+/* Energy ratio for T2_VAD_MARGIN_DB, a fixed factor so the hot path needs no logarithm. */
 #define VAD_MARGIN_FACTOR 8u
 
 static void send_window(uint32_t window_samples, uint32_t active_frames)
@@ -53,8 +50,7 @@ static uint32_t clamp_window(uint32_t value)
     return value - (value % T1_WINDOW_STEP);
 }
 
-/* The gate lever from the program plan. T3 peeks this flag without blocking,
-   so the controller can suppress the feature stage entirely on silence. */
+/* The gate lever, T3 peeks this flag without blocking. */
 static void set_feature_gate(bool skip)
 {
     if (skip) {
@@ -71,19 +67,7 @@ static void set_inference_priority(PRI priority)
     }
 }
 
-/* The single move that most reduces projected cost.
-
-   Demoting a layer to INT8 gains its measured saving; promoting one back to
-   FP32 gains the negative of that, which is positive exactly for the layers
-   where FP32 is the faster choice. Ranking both directions on one scale makes
-   the policy a hill climb on measured cost: every accepted move strictly
-   reduces the projection, so the walk cannot cycle and must terminate.
-
-   The deadline is a constraint the walk satisfies on the way, not the goal.
-   Stopping at the first mask that merely meets the deadline would leave the
-   controller worse than a static INT8 build, which is the trap this policy
-   avoids. On this part the optimum is mixed, because the depthwise layers are
-   slower in INT8, and no single precision build can express it. */
+/* The single move that most reduces projected cost, a hill climb that cannot cycle, see docs/adaptation.md. */
 typedef struct {
     int32_t index;
     uint8_t action;
@@ -127,8 +111,7 @@ void t5_controller_task(INT stacd, void *exinf)
     (void)stacd;
     (void)exinf;
 
-    /* Start at the reference precision and let pressure push it down, which is
-       the direction the program plan describes. */
+    /* Start at the reference precision and let pressure push it down. */
     uint32_t mask = (KWS_NUM_LAYERS >= 32) ? 0xFFFFFFFFu
                                            : ((1u << KWS_NUM_LAYERS) - 1u);
     adapt_state.precision_mask = mask;
@@ -150,8 +133,7 @@ void t5_controller_task(INT stacd, void *exinf)
         }
         t5_stats.decisions++;
 
-        /* Learn the gate. The floor comes from blocks the gate itself judged
-           quiet, so speech never drags the threshold up behind itself. */
+        /* The floor is learned only from blocks the gate judged quiet. */
         if (t2_stats.noise_floor > 0) {
             uint32_t learned = t2_stats.noise_floor * VAD_MARGIN_FACTOR;
             if (learned != adapt_state.vad_threshold) {
@@ -162,8 +144,7 @@ void t5_controller_task(INT stacd, void *exinf)
 
         if (pattern & FLG_QUIESCENT) {
             quiet_run++;
-            /* Nothing is happening. Widen the capture block so the pipeline is
-               woken less often, and shorten the context the model is given. */
+            /* Quiet: widen the capture block and shorten the context. */
             if (quiet_run > 2) {
                 set_feature_gate(true);
                 uint32_t wider = clamp_window(window + T1_WINDOW_STEP);
@@ -179,20 +160,13 @@ void t5_controller_task(INT stacd, void *exinf)
             continue;
         }
 
-        /* Any non quiescent event means the signal is live again, so the gate
-           reopens immediately rather than waiting for an inference that cannot
-           happen while it is shut. */
+        /* Any live event reopens the gate immediately. */
         quiet_run = 0;
         set_feature_gate(false);
 
-        /* T4 raises the overrun flag and the done flag for the same inference
-           in one call, so they always arrive together and a late inference is
-           one decision. Raised separately, this task would wake between them,
-           the cost would still read as over on the second wake, and one miss
-           would be counted twice. */
+        /* Overrun and done arrive together, so a late inference is one decision. */
         if (pattern & (FLG_INFERENCE_DONE | FLG_BUDGET_EXCEEDED)) {
-            /* Learn the cost of an inference as an exponential mean, so the
-               controller reacts to the machine it is actually running on. */
+            /* Inference cost as an exponential mean. */
             uint32_t cost = t4_stats.last.total_cycles;
             t5_stats.cycles_ewma = t5_stats.cycles_ewma == 0
                                        ? cost
@@ -201,13 +175,7 @@ void t5_controller_task(INT stacd, void *exinf)
 
             uint32_t deadline = adapt_state.deadline_cycles;
 
-            /* T4 runs whatever adapt_state holds, and the benchmark writes that
-               field directly to pin a configuration. The controller therefore
-               re-reads it here rather than trusting the mask it last wrote:
-               without this the two diverge the moment anything else sets the
-               field, the controller ranks moves against a configuration that is
-               not executing, and every trace row labels a measured cost with a
-               mask that did not produce it. */
+            /* Re read the mask every decision, the benchmark writes it directly to pin a configuration. */
             mask = adapt_state.precision_mask;
             uint32_t before = mask;
             uint8_t action = T5_ACTION_NONE;
@@ -217,9 +185,7 @@ void t5_controller_task(INT stacd, void *exinf)
                 t5_stats.deadline_misses++;
             }
 
-            /* Precision is only adjusted once the cost table is measured.
-               Until then the controller has no basis for ranking layers and
-               would be guessing, which is what the calibration exists to avoid. */
+            /* Precision moves wait for the measured cost table. */
             if (t4_cost_table.valid && !adapt_state.pin_precision) {
                 t5_move_t move = best_move(mask);
                 if (move.index >= 0) {
@@ -245,14 +211,8 @@ void t5_controller_task(INT stacd, void *exinf)
                 }
             }
 
-            /* Convergence is declared when no move improves cost for a while.
-               On the first convergence the controller restarts once from the
-               opposite extreme: if the walk lands on the same mask from both
-               ends, the operating point is a property of the silicon rather
-               than of where the search began. */
-            /* The pinned case is excluded because a pinned controller can
-               never produce a move, so every decision would look settled and
-               the probe below would overwrite the very mask being held. */
+            /* On first convergence restart once from the opposite extreme to check path independence. */
+            /* Not while pinned, a pinned controller never moves and the probe would overwrite the held mask. */
             if (action == T5_ACTION_NONE && !adapt_state.pin_precision) {
                 settled++;
                 if (settled >= T5_CONVERGE_DECISIONS && !t5_stats.converged) {
@@ -274,13 +234,7 @@ void t5_controller_task(INT stacd, void *exinf)
 
             trace_decision(before, mask, action, over, cost);
 
-            /* The window trades reaction latency against interrupt rate. A
-               shorter window wakes the pipeline sooner, but it also multiplies
-               the block rate, and past some point the capture chain stops
-               keeping up and drops audio, which is a worse failure than being
-               slightly late. The direction is therefore decided by whether
-               blocks were actually dropped since the last decision rather than
-               by assuming shorter is better. */
+            /* Widen on dropped blocks, shorten only while the chain keeps up. */
             uint32_t overruns_now = signal_source_overruns();
             bool capture_behind = overruns_now > last_overruns;
             last_overruns = overruns_now;

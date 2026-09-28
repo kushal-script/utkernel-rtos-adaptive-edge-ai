@@ -18,29 +18,17 @@ t3_stats_t t3_stats;
 
 static int16_t raw_frame[FRAME_SIZE_SAMPLES];
 
-/* The sliding history is private. Rows are written oldest first and rotated
-   once full, so the newest frame is always the last row. The tensor the
-   inference core reads is published from it at inference time, never mutated
-   frame by frame, so a running inference is never read out from under. */
+/* Private sliding history, newest frame last, published to the core at inference time. */
 static int8_t   history[KWS_FRAMES * KWS_COEFFS];
 static uint32_t rows_filled;
 
-/* Two published tensors. A publication fills the one the inference core is
-   not reading, then swaps the pointer it reads, so an inference that outlasts
-   the stride, which static FP32 does on every classification, still reads a
-   tensor nothing writes to. Clobbering it would take two further publications
-   inside one inference, an inference of over two strides, which no
-   configuration approaches. The core reads the pointer once, when it wakes
-   on the ready flag that is raised after the swap. */
+/* Two published tensors swapped on publication, so a long inference never reads one being written. */
 typedef struct {
     int8_t   grid[KWS_FRAMES * KWS_COEFFS];
     uint32_t corpus_end;   /* where in the corpus this tensor's audio ends */
 } published_t;
 
-/* The corpus position travels inside the buffer so that the one pointer read
-   the inference core makes yields the tensor and its ground truth together.
-   Read separately, a publication landing during a long inference would pair
-   the audio the core saw with the label of the audio that replaced it. */
+/* The corpus position travels in the buffer, so the tensor and its label are read together. */
 static published_t published[2];
 static uint32_t    publish_index;
 const int8_t      *t3_feature_grid = published[0].grid;
@@ -74,14 +62,7 @@ void t3_apply_active_frames(uint32_t active)
     if (active > KWS_FRAMES) {
         active = KWS_FRAMES;
     }
-    /* The newest `active` rows become rows 0 to active minus 1 of the tensor
-       and the rest read as zero in the model's input space, which is the
-       input zero point rather than the byte zero because the activation
-       quantisation is asymmetric. That is the shape training produced: a clip
-       whose leading frames hold the audio and whose trailing frames are zero.
-       On a sliding history the leading frames must be the most recent ones,
-       otherwise a shortened context discards the word just spoken and keeps
-       the second before it. */
+    /* Newest rows lead, the rest hold the input zero point, the layout training produced. */
     published_t *next = &published[publish_index ^ 1u];
     size_t       keep = (size_t)active * KWS_COEFFS;
     memcpy(next->grid, history + (KWS_FRAMES - active) * KWS_COEFFS, keep);
@@ -117,17 +98,12 @@ void t3_features_task(INT stacd, void *exinf)
             continue;
         }
 
-        /* Non blocking peek at the gate, the controller can suppress the
-           feature stage without ever blocking this task. */
+        /* Non blocking peek at the gate. */
         T_RFLG gate;
         if (tk_ref_flg(flgid_gate, &gate) == E_OK &&
             (gate.flgptn & FLG_SKIP_FEATURES) != 0) {
             t3_stats.frames_skipped++;
-            /* Frames are not being computed, so the grid is about to have a
-               hole in it. Start it again rather than stitching audio from
-               either side of a silence into one tensor, which would present
-               the model with a clip that never existed and score it against a
-               label that cannot describe it. */
+            /* The grid would have a hole, so start it again rather than stitch across silence. */
             if (rows_filled > 0) {
                 rows_filled = 0;
                 since_inference = 0;
@@ -141,10 +117,7 @@ void t3_features_task(INT stacd, void *exinf)
             uint32_t behind = sample_ring_count(&t2_ring) - consumed;
             if (!sample_ring_peek(&t2_ring, behind - FRAME_SIZE_SAMPLES,
                                   raw_frame, FRAME_SIZE_SAMPLES)) {
-                /* The producer has lapped the history this frame needed. Skip
-                   to the newest complete window rather than retrying the same
-                   unreachable one forever, and count the loss so the benchmark
-                   reports it instead of hiding a silent stall. */
+                /* The producer lapped this frame, skip to the newest window and count the loss. */
                 uint32_t available = sample_ring_count(&t2_ring);
                 consumed = available > FRAME_SIZE_SAMPLES
                                ? available - FRAME_SIZE_SAMPLES

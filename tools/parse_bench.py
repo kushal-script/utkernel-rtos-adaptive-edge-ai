@@ -1,14 +1,4 @@
-"""Turn the device benchmark report into an experiment folder with figures.
-
-The firmware prints a block between BENCH_BEGIN and BENCH_END. Feed it either a
-serial port or a captured text file:
-
-    python tools/parse_bench.py /dev/tty.usbmodemXXXX
-    python tools/parse_bench.py --file capture.txt
-
-Writes experiments/<timestamp>_bench/ with the parsed numbers, the raw capture,
-and the latency against accuracy figure the writeup is built on.
-"""
+"""Turn the device benchmark report into an experiment folder with figures."""
 
 import argparse
 import json
@@ -42,10 +32,7 @@ def read_serial(port: str, baud: int = 115200, timeout: float = 120.0,
     started = False
     with serial.Serial(port, baud, timeout=1) as handle:
         print(f"listening on {port} for BENCH_BEGIN, up to {timeout:.0f} s")
-        # Two separate allowances. The first waits for the run to start, the
-        # second bounds the silence between lines once it has. They must not be
-        # one budget: a live window is thirty seconds of deliberate quiet, so a
-        # single countdown expires part way through the report and truncates it.
+        # Separate allowances for the start and for silence between lines, a live window is 30 s quiet.
         quiet = timeout
         while quiet > 0:
             raw = handle.readline()
@@ -159,8 +146,7 @@ def write_plots(plot_dir: Path, parsed: dict):
         ax[0].set_ylabel("core idle, percent of wall time")
         ax[0].set_title("energy proxy, whole pipeline live")
 
-        # Wilson intervals, because the end to end sample is small enough that
-        # a bare percentage would overstate what it supports.
+        # Wilson intervals, the end to end sample is small.
         import math
 
         centres, errs = [], [[], []]

@@ -2,9 +2,7 @@
 
 #include <stdint.h>
 
-/* Threads, mutexes and condition variables across the three hosts this tool
-   supports. C11 threads.h is not available on Apple's toolchain, so this maps
-   to pthreads on macOS and Linux and to the Win32 primitives elsewhere. */
+/* Threads, mutexes and condition variables on pthreads or Win32, Apple has no C11 threads. */
 
 #if defined(_WIN32)
 
@@ -40,7 +38,6 @@ void ucond_broadcast(ucond_t *c);
 int  uthread_start(uthread_t *t, void (*entry)(void *), void *arg);
 void uthread_join(uthread_t t);
 
-/* Monotonic microseconds since an arbitrary origin, the base for both the
-   virtual device cycle clock and the capture pacing. */
+/* Monotonic microseconds, the base for the virtual cycle clock and capture pacing. */
 uint64_t umonotonic_us(void);
 void     usleep_us(uint64_t us);

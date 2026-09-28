@@ -4,15 +4,7 @@
 
 #include <tk/tkernel.h>
 
-/* T5, the adaptation controller. It is the only task that writes adaptation
-   state, and it drives all four levers together every cycle: the capture
-   window through a mailbox to T1, the active feature count, the per layer
-   numeric precision, and task priority.
-
-   The thresholds are not constants. The controller learns the quiescent noise
-   floor and the achievable cycle cost at runtime and places its decision
-   boundaries relative to what it observes, so it works in an acoustic
-   environment it was never tuned for. See docs/adaptation.md. */
+/* T5, the only writer of adaptation decisions; thresholds are learned at runtime, see docs/adaptation.md. */
 
 typedef struct {
     uint32_t decisions;
@@ -30,9 +22,7 @@ typedef struct {
     uint32_t deadline_misses;  /* inferences over the deadline, mostly transient */
 } t5_stats_t;
 
-/* One controller decision, kept so the convergence transient can be plotted
-   rather than only its endpoint. This is the figure the roadmap M6 exit asks
-   for: latency against inference index with the deadline and the moves marked. */
+/* One controller decision, kept so the convergence transient can be plotted. */
 typedef enum {
     T5_ACTION_NONE = 0,
     T5_ACTION_DEMOTE,

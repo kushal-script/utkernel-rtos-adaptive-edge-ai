@@ -1,12 +1,4 @@
-"""Train the DS-CNN keyword model and record the run under experiments/.
-
-Usage:
-    python -m kws.train --root model/datasets/speech_commands_v0.02 --epochs 30
-
-Features are cached as .npy next to the corpus, so repeat runs skip the
-expensive wav decode and FFT pass. Every run writes a timestamped experiment
-folder with config, metrics, plots, and the checkpoint, per experiments/README.md.
-"""
+"""Train the DS-CNN keyword model and record the run under experiments/."""
 
 import argparse
 import json
@@ -60,8 +52,7 @@ def build_features(root: Path, cfg: FeatureConfig, cache_dir: Path, seed: int):
         saveable[f"{split}_x"] = feats
         saveable[f"{split}_y"] = labels
         if split == "test":
-            # A few raw clips travel with the cache so the exporter can emit
-            # them as the device replay source, see docs/signal_source.md.
+            # A few raw clips travel with the cache for the replay source.
             saveable["test_raw"] = waves[:RAW_CLIPS_KEPT].astype(np.float32)
             saveable["test_raw_y"] = labels[:RAW_CLIPS_KEPT]
         print(f"  {split:5} {feats.shape[0]:6} clips -> {feats.shape}")

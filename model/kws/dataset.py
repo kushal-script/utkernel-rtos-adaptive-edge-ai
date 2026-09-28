@@ -1,10 +1,4 @@
-"""Speech Commands v0.02 loading, splitting, and feature caching.
-
-Uses the corpus's own validation_list.txt and testing_list.txt so the split
-matches published keyword spotting results and a speaker never appears in two
-splits. Twelve classes, the standard benchmark task: ten keywords plus silence
-plus unknown.
-"""
+"""Speech Commands v0.02 loading with the official split, twelve classes, and feature caching."""
 
 import hashlib
 import wave as wavelib
@@ -78,11 +72,7 @@ class SpeechCommands:
         return [read_wav(p) for p in sorted(bg_dir.glob("*.wav"))]
 
     def build(self, unknown_ratio: float = 1.0, silence_ratio: float = 1.0):
-        """Return {split: (waveforms, labels)} with waveforms as float32 clips.
-
-        unknown_ratio and silence_ratio are multiples of the mean per keyword
-        count, keeping the twelve classes roughly balanced.
-        """
+        """Return {split: (waveforms, labels)}, unknown and silence scaled to keep the classes balanced."""
         val_set, test_set = self._lists()
         buckets = {s: {"wave": [], "label": []} for s in ("train", "val", "test")}
         unknown_pool = {s: [] for s in ("train", "val", "test")}

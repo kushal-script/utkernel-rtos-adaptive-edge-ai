@@ -52,8 +52,7 @@ int uthread_start(uthread_t *t, void (*entry)(void *), void *arg)
     }
     tr->entry = entry;
     tr->arg   = arg;
-    /* Stack size zero takes the image default, which is far larger than any
-       stksz the firmware asks for, so a task never runs short here. */
+    /* Stack size zero takes the image default, larger than any stksz the firmware asks for. */
     uintptr_t h = _beginthreadex(NULL, 0, win_trampoline, tr, 0, NULL);
     if (h == 0) {
         free(tr);
@@ -78,16 +77,14 @@ uint64_t umonotonic_us(void)
     if (freq.QuadPart == 0) {
         return 0;
     }
-    /* Divided before scaling because the counter times a microsecond factor
-       overflows a signed 64 bit value after about ten days of uptime. */
+    /* Divide before scaling, the product overflows int64 after about ten days. */
     return (uint64_t)(now.QuadPart / freq.QuadPart) * 1000000u
          + (uint64_t)(((now.QuadPart % freq.QuadPart) * 1000000LL) / freq.QuadPart);
 }
 
 void usleep_us(uint64_t us)
 {
-    /* Sleep takes milliseconds, so sub millisecond waits round up rather than
-       busy spin, which is accurate enough for block pacing at 16 kHz. */
+    /* Sleep rounds sub millisecond waits up rather than busy spinning. */
     DWORD ms = (DWORD)((us + 999u) / 1000u);
     Sleep(ms);
 }

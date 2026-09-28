@@ -5,10 +5,7 @@
 
 #include "app_config.h"
 
-/* Single producer single consumer ring between the variance stage and the
-   feature stage. The DMA to CPU handoff itself is copy free, the CPU reads the
-   half the DMA is not writing. This ring exists because an analysis frame is
-   longer than one capture block and must not be torn across a refill. */
+/* Single producer single consumer ring from T2 to T3, so a frame is never torn across a block. */
 
 typedef struct {
     int16_t  data[T3_SAMPLE_RING];
@@ -20,9 +17,7 @@ void     sample_ring_reset(sample_ring_t *ring);
 uint32_t sample_ring_count(const sample_ring_t *ring);
 void     sample_ring_push(sample_ring_t *ring, const int16_t *src, uint32_t count);
 
-/* Copies `count` samples starting `offset` behind the write cursor without
-   consuming them, so overlapping frames can be read. Returns false if that
-   much history is not present. */
+/* Copies `count` samples starting `offset` behind the write cursor without consuming; false if absent. */
 bool sample_ring_peek(const sample_ring_t *ring, uint32_t offset,
                       int16_t *dst, uint32_t count);
 

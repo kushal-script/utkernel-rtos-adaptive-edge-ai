@@ -32,8 +32,7 @@ static void wav_fail(char *err, size_t errlen, const char *fmt, ...)
     va_end(ap);
 }
 
-/* Header fields are assembled from bytes so the result does not depend on the
-   host byte order or on the alignment of the buffer they were read into. */
+/* Fields assembled from bytes, independent of host byte order and alignment. */
 static uint16_t wav_le16(const uint8_t *b)
 {
     return (uint16_t)((uint32_t)b[0] | ((uint32_t)b[1] << 8));
@@ -45,8 +44,7 @@ static uint32_t wav_le32(const uint8_t *b)
            ((uint32_t)b[2] << 16) | ((uint32_t)b[3] << 24);
 }
 
-/* Two's complement is spelled out rather than cast, which is implementation
-   defined for values above 32767 until C23. */
+/* Two's complement spelled out, the cast is implementation defined before C23. */
 static int32_t wav_sample16(const uint8_t *b)
 {
     uint32_t raw = wav_le16(b);
@@ -81,8 +79,7 @@ static int wav_skip(FILE *f, uint32_t count)
     return 1;
 }
 
-/* Four character chunk ids reach the error strings, so anything unprintable is
-   replaced rather than passed through to a terminal. */
+/* Unprintable chunk id bytes are replaced before reaching error strings. */
 static void wav_tag(const uint8_t *b, char *out)
 {
     for (int i = 0; i < 4; i++) {
@@ -233,8 +230,7 @@ static int wav_parse(FILE *f, int16_t **samples, uint32_t *count, uint32_t *rate
         return -1;
     }
 
-    /* Chunks are walked rather than assumed, and each one is followed by a pad
-       byte when its size is odd. */
+    /* Walk chunks, each padded to an even size. */
     while (!have_fmt || !have_data) {
         uint8_t chunk[8];
         uint32_t size;

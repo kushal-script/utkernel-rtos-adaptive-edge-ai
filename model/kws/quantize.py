@@ -1,15 +1,4 @@
-"""Post training quantisation to the layer format the device core executes.
-
-The deployed graph is flat: batch norm is folded into the preceding
-convolution, so every layer is one of convolution, depthwise convolution,
-pointwise convolution, or fully connected, each followed by an optional ReLU.
-
-Both an INT8 and an FP32 copy of every layer are exported, because the device
-selects precision per layer at runtime. The activation scale at each layer
-boundary is fixed here at export time from calibration data, so switching a
-layer's precision never changes what the numbers at the boundary mean. See
-docs/inference_core.md.
-"""
+"""Post training quantisation to the device layer format, INT8 and FP32 per layer, see docs/inference_core.md."""
 
 from dataclasses import dataclass, field
 
@@ -64,11 +53,7 @@ class LayerSpec:
 
 
 def quantise_multiplier(real_multiplier: float):
-    """Split M into (int32 M0, shift n) with M = M0 * 2^-31 * 2^n.
-
-    This is the TFLite and CMSIS-NN convention. The runtime applies it with a
-    saturating rounding doubling high multiply followed by a rounding shift.
-    """
+    """Split M into (int32 M0, shift n) with M = M0 * 2^-31 * 2^n, the TFLite and CMSIS-NN convention."""
     if real_multiplier <= 0.0:
         return 0, 0
     significand, exponent = np.frexp(real_multiplier)  # M = significand * 2^exponent

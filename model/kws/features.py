@@ -1,11 +1,4 @@
-"""MFCC front end, the single source of truth for feature extraction.
-
-The firmware computes the same features on device. To guarantee the two agree,
-the mel filterbank, the window, and the DCT matrix are generated here and
-emitted as C tables by export.py, so the device never recomputes them. Any
-change to FeatureConfig must be followed by regenerating the C tables and
-rerunning the host against device comparison described in docs/features.md.
-"""
+"""MFCC front end, the single source of truth; export.py emits its tables for the device."""
 
 from dataclasses import dataclass, asdict
 
@@ -57,11 +50,7 @@ def mel_to_hz(m):
 
 
 def mel_filterbank(cfg: FeatureConfig) -> np.ndarray:
-    """Triangular mel filterbank, shape (n_mel, n_bins), rows sum to about 1.
-
-    Slaney style triangles on a mel grid, area normalised so that wide high
-    frequency filters do not dominate the log energies.
-    """
+    """Slaney style triangular mel filterbank, shape (n_mel, n_bins), area normalised."""
     edges_mel = np.linspace(
         hz_to_mel(cfg.mel_low_hz), hz_to_mel(cfg.mel_high_hz), cfg.n_mel + 2
     )

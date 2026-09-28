@@ -20,14 +20,12 @@ adapt_state_t adapt_state = {
     .vad_threshold   = 0,
 };
 
-/* Backing store for the layer streaming pool, supplied by the application so
-   the kernel heap is not involved. */
+/* Backing store for the layer pool, so the kernel heap is not involved. */
 static uint8_t layer_pool_buffer[KWS_LAYER_POOL_BYTES] __attribute__((aligned(8)));
 
 static ER create_flag(ID *slot, const char *name)
 {
-    /* TA_WMUL so a flag can have more than one waiter, which the pipeline
-       needs even though each object serves a single consumer today. */
+    /* TA_WMUL so a flag can take more than one waiter. */
     T_CFLG cflg = {
         .exinf   = NULL,
         .flgatr  = TA_TFIFO | TA_WMUL,

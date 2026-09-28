@@ -7,9 +7,7 @@
 #include "ipc_objects.h"
 #include "main.h"
 
-/* Capture buffer, two halves. The DMA writes one half while the pipeline reads
-   the other, so the handoff itself costs no copy. Sized for the largest window
-   the controller may select, the transfer size is what actually changes. */
+/* Two half capture buffer, the DMA writes one half while the pipeline reads the other. */
 static int16_t capture[T1_CAPTURE_SAMPLES] __attribute__((aligned(4)));
 
 static uint32_t window_samples = T1_WINDOW_DEFAULT;
@@ -34,9 +32,7 @@ void signal_source_completed_block(UINT pattern, const int16_t **block,
 
 void signal_source_release_block(void)
 {
-    /* Cleared only once the consumer has copied the block out. Clearing it at
-       hand out would hide the case where the next interrupt arrives before the
-       consumer is finished, which is exactly the overrun worth counting. */
+    /* Cleared only after the consumer copies the block out, so a late consumer counts as an overrun. */
     pending = 0;
 }
 
@@ -44,19 +40,7 @@ void signal_source_release_block(void)
 
 #include "replay_data.h"
 
-/* Timer paced GPDMA replay.
-
-   TIM6 raises an update event at the sample rate and GPDMA1 channel 1 takes it
-   as a hardware request, moving one sample per event out of the flash resident
-   corpus into the capture buffer. Direction is peripheral to memory with an
-   incrementing source, because the memory to memory setting means a software
-   request and would run free rather than at the sample rate.
-
-   Two linked list nodes ping pong between the halves of the capture buffer.
-   When a node completes its source address is advanced to the next chunk of
-   the corpus, which is a single register write, so the stream keeps moving
-   without rebuilding the list. Channel 0 is left alone, it belongs to the I2S
-   path. See docs/signal_source.md. */
+/* Timer paced GPDMA replay, TIM6 requests one sample per update, see docs/signal_source.md. */
 
 static DMA_HandleTypeDef hdma_replay;
 static DMA_NodeTypeDef   replay_node[2];
@@ -93,8 +77,7 @@ static void replay_block_complete(DMA_HandleTypeDef *hdma)
     }
     pending = 1;
 
-    /* Stage the next chunk into the node that just finished, it will not run
-       again until the other node has completed. */
+    /* Stage the next chunk into the node that just finished. */
     replay_offset = advance_offset(window_samples);
     node_offset[finished] = replay_offset;
     replay_node[finished].LinkRegisters[NODE_SOURCE_REGISTER] =
@@ -239,9 +222,7 @@ ER signal_source_set_window(uint32_t samples)
         return E_PAR;
     }
 
-    /* Resume where playback had reached. Restarting from the beginning would
-       make the corpus never advance once the controller resizes regularly, and
-       would silently invalidate every ground truth label. */
+    /* Resume where playback reached, so the corpus keeps advancing and labels stay valid. */
     uint32_t resume = replay_offset;
     timer_stop();
     HAL_DMA_Abort(&hdma_replay);
@@ -255,12 +236,7 @@ uint32_t signal_source_completed_corpus(void)
 
 int signal_source_label_for_span(uint32_t end_offset, uint32_t span)
 {
-    /* The grid spans very nearly a whole clip, so demanding that it sit
-       entirely inside one clip means it essentially never does and nothing is
-       ever scored. What is defensible is to score against the clip that
-       dominates the span, and to refuse when no clip dominates, because a span
-       split evenly across two clips has no single correct answer and guessing
-       would quietly corrupt the reported accuracy. */
+    /* Score against the clip that dominates the span, refuse when none does. */
     if (span == 0u || end_offset < span) {
         return -1;
     }
@@ -300,10 +276,7 @@ void GPDMA1_Channel1_IRQHandler(void)
 
 #else  /* KWS_SIGNAL_SOURCE == KWS_SOURCE_I2S */
 
-/* Live INMP441 capture. The microphone delivers 24 bit samples in 32 bit I2S
-   slots, so the raw buffer is twice the width of the capture buffer and the
-   completed block is narrowed before the pipeline sees it. Needs hardware
-   verification, see docs/mic_verification.md. */
+/* Live INMP441 capture, 24 bit samples in 32 bit slots, see docs/mic_verification.md. */
 
 extern I2S_HandleTypeDef hi2s2;
 
@@ -346,8 +319,7 @@ int signal_source_label_for_span(uint32_t end_offset, uint32_t span)
 
 static void narrow(uint32_t half)
 {
-    /* One channel of the stereo frame carries signal, take the upper 16 bits
-       of the 24 bit sample so the pipeline always sees int16. */
+    /* Upper 16 bits of the 24 bit sample from the one live channel. */
     const int32_t *src = &i2s_raw[half * window_samples * 2];
     int16_t *dst = &capture[half * window_samples];
     for (uint32_t i = 0; i < window_samples; i++) {

@@ -4,25 +4,17 @@
 
 #include "kws_kernels.h"
 
-/* Two arenas, ping ponged between layers. Each must hold the largest
-   activation tensor in whichever precision that layer runs, so they are sized
-   for float even though most layers use int8. */
+/* Two ping pong arenas, sized for the largest activation tensor in float. */
 static float arena_a[KWS_MAX_TENSOR_ELEMS];
 static float arena_b[KWS_MAX_TENSOR_ELEMS];
 
-/* Folded accumulator tables, folded[oc] = bias[oc] + input_offset * sum(w).
-   Computed once from the layer table, they let the INT8 inner loops drop the
-   per element offset add, see kws_kernels.h. Depthwise keeps the plain path,
-   its window is small and its samples are not contiguous. */
+/* Folded accumulators, folded[oc] = bias[oc] + input_offset * sum(w), see kws_kernels.h. */
 #define KWS_FOLDED_SLOTS 640
 static int32_t folded_store[KWS_FOLDED_SLOTS];
 _Static_assert(KWS_FOLDED_SLOTS >= KWS_FOLDED_SLOTS_REQUIRED,
                "folded_store is too small for this model, raise KWS_FOLDED_SLOTS");
 
-/* Per kernel row weight sums for padded convolutions, rowsum[oc][kh]. They
-   let a window that overlaps the padding take the folded path too, by
-   subtracting the weights of the taps that fall outside. Only the stem pads,
-   so only the stem takes slots. */
+/* Per kernel row weight sums for padded convolutions, so border windows can fold too. */
 #define KWS_ROWSUM_SLOTS 640
 static int32_t rowsum_store[KWS_ROWSUM_SLOTS];
 static const int32_t *layer_rowsum[KWS_NUM_LAYERS];
@@ -126,8 +118,7 @@ void kws_infer(const int8_t *feature_grid, uint32_t precision_mask,
         uint32_t want = (precision_mask >> index) & 1u ? KWS_PRECISION_FP32
                                                        : KWS_PRECISION_INT8;
 
-        /* Size of the tensor actually held right now, which for the classifier
-           is still the previous layer's output because the pool has not run. */
+        /* Size of the tensor held now, for the classifier still the previous layer's output. */
         uint32_t in_elems;
         if (index == 0) {
             in_elems = input_elems;
@@ -136,8 +127,7 @@ void kws_infer(const int8_t *feature_grid, uint32_t precision_mask,
             in_elems = (uint32_t)prev->out_h * prev->out_w * prev->out_c;
         }
 
-        /* Convert at the boundary when the precision changes. The scale is
-           fixed at export, so the numbers keep their meaning. */
+        /* Convert at a precision boundary, the scale is fixed at export. */
         if (want != mode) {
             if (want == KWS_PRECISION_FP32) {
                 kws_dequantise((const int8_t *)current, (float *)spare, in_elems,
@@ -152,9 +142,7 @@ void kws_infer(const int8_t *feature_grid, uint32_t precision_mask,
             mode = want;
         }
 
-        /* The classifier is preceded by a global average pool over the tensor
-           the previous layer produced, which is why its shape is taken from
-           there rather than from this layer's declared input. */
+        /* The classifier's pool runs on the previous layer's tensor, so its shape comes from there. */
         if (layer->kind == KWS_LAYER_FULLY_CONNECTED && index > 0) {
             const kws_layer_t *prev = &kws_layers[index - 1];
             if (mode == KWS_PRECISION_INT8) {
@@ -219,12 +207,7 @@ void kws_infer(const int8_t *feature_grid, uint32_t precision_mask,
         result->layer_cycles[index] = elapsed;
         result->layer_precision[index] = (uint8_t)want;
 
-        /* The overrun signal is the cumulative spend crossing the deadline,
-           recorded at the layer where it happened. A uniform per layer share
-           cannot work here, the stem alone is over a fifth of the network, so
-           it would exceed a tenth of any deadline at either precision and the
-           controller would demote forever. The even split of the remaining
-           budget is still recorded per layer as telemetry. */
+        /* Overrun is the cumulative spend crossing the deadline, recorded at the layer where it happens. */
         spent += elapsed;
         if (deadline_cycles > 0) {
             uint32_t remaining_layers = KWS_NUM_LAYERS - 1 - index;

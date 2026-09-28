@@ -28,11 +28,7 @@ void sample_ring_push(sample_ring_t *ring, const int16_t *src, uint32_t count)
 bool sample_ring_peek(const sample_ring_t *ring, uint32_t offset,
                       int16_t *dst, uint32_t count)
 {
-    /* The write cursor is sampled once and rechecked after the copy. The
-       producer runs at a higher priority than the consumer and can preempt this
-       copy, so a frame can be overwritten while it is being read. Detecting
-       that and reporting failure lets the caller resynchronise, which is far
-       better than handing back a frame stitched from two different moments. */
+    /* Recheck the write cursor after the copy, the producer can overwrite a frame mid read. */
     uint32_t write = ring->write;
     if (offset + count > T3_SAMPLE_RING || offset + count > write) {
         return false;

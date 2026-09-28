@@ -1,10 +1,6 @@
 #pragma once
 
-/* Feature geometry. Mirrors FeatureConfig in model/kws/features.py, which is
-   the single source of truth. Changing anything here means regenerating the
-   exported tables and the model. The 30 ms frame with a 20 ms hop yields 49
-   frames over one second, the input shape used by the published keyword
-   spotting networks this project is compared against. */
+/* Feature geometry, mirrors FeatureConfig in model/kws/features.py; change both and regenerate. */
 
 #define SAMPLE_RATE_HZ      16000
 #define CLIP_SAMPLES        16000

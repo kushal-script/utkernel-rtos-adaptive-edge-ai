@@ -20,10 +20,7 @@ void dwt_log_layer(uint8_t layer_id, uint32_t cycles) {
         ITM_SendChar((cycles >> (8 * i)) & 0xFF);
 }
 
-/* Overrides the weak HAL implementation. Once the kernel starts, SysTick belongs
-   to it and HAL_IncTick is no longer called, so every HAL timeout would wait
-   forever on a tick that never advances. Deriving the tick from the cycle
-   counter keeps HAL timeouts finite without adding a second timer. */
+/* Overrides the weak HAL tick, SysTick belongs to the kernel, so HAL timeouts count cycles instead. */
 uint32_t HAL_GetTick(void)
 {
     return dwt_read() / (SYSTEM_CLOCK_HZ / 1000u);

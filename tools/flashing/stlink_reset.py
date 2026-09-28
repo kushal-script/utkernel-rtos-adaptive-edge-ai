@@ -1,16 +1,4 @@
-"""Reset the ST-LINK over USB to open a fresh debug window.
-
-On some hosts the ST-LINK's SWD side degrades after a few OpenOCD sessions:
-the debug port still answers its ID but every register read fails. A USB
-device reset clears that without touching the target. It resets the probe
-only, never the STM32, and issues no flash or option byte command of any kind.
-
-    python tools/flashing/stlink_reset.py
-
-Waits for the virtual COM port to come back, and prints its name, which can
-change across resets. Run this before jump_bootloader.tcl when that script
-fails with "Fail reading CTRL/STAT register".
-"""
+"""Reset the ST-LINK over USB to reopen its debug window, the probe only, see tools/flashing/README.md."""
 
 import glob
 import sys

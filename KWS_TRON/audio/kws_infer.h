@@ -5,10 +5,7 @@
 #include "kws_layer.h"
 #include "kws_model.h"
 
-/* The inference core, deliberately free of any kernel dependency so it can be
-   compiled and checked against the NumPy golden reference on a host before it
-   ever runs on the board. T4 wraps it with the RTOS concerns, the budget flag,
-   the priority change, and the weight streaming. */
+/* The inference core, kernel free so it can be checked against the NumPy reference on a host. */
 
 typedef struct {
     uint32_t layer_cycles[KWS_NUM_LAYERS];
@@ -21,18 +18,14 @@ typedef struct {
     float    logits[KWS_NUM_CLASSES];
 } kws_result_t;
 
-/* Precision is a bit mask, bit n set means layer n runs FP32. The remaining
-   layers run INT8. Boundary conversions are inserted automatically wherever
-   consecutive layers disagree. */
+/* Bit n set means layer n runs FP32; conversions are inserted where neighbours disagree. */
 void kws_infer(const int8_t *feature_grid, uint32_t precision_mask,
                uint32_t deadline_cycles, kws_result_t *result);
 
-/* Cycle source. The firmware provides the DWT counter, a host test can leave
-   the default, which reports zero and disables budget enforcement. */
+/* Cycle source, the host default returns zero and disables budget enforcement. */
 uint32_t kws_cycle_counter(void);
 
-/* Weight access, so the RTOS build can stream a layer's weights into a memory
-   pool block while a plain build reads them straight out of flash. */
+/* Weight access, so the RTOS build can stream a layer's weights through a pool. */
 const void *kws_weights_acquire(const kws_layer_t *layer, uint32_t precision,
                                 uint32_t *bytes);
 void kws_weights_release(const void *block);

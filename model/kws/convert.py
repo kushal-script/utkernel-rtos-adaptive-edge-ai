@@ -1,20 +1,4 @@
-"""Convert a trained checkpoint into the device layer format, and verify it.
-
-Three jobs, in order:
-
-1. Flatten the trained graph: fold every batch norm into the convolution before
-   it, so the deployed graph is only convolution, depthwise, pointwise, fully
-   connected, ReLU, and one average pool.
-2. Quantise: per channel symmetric int8 weights, per tensor asymmetric int8
-   activations calibrated on real data, int32 bias, per channel requantisation
-   multipliers.
-3. Verify: run a NumPy reference of exactly what the device core will compute
-   and compare against the float model. That reference is the golden model the
-   C implementation is checked against, so a device mismatch is always a bug in
-   the C, never an unknown.
-
-Tensor layout on device is NHWC and weights are OHWI, matching CMSIS-NN.
-"""
+"""Convert a trained checkpoint to the device layer format and verify it against the float model."""
 
 import numpy as np
 import torch
@@ -171,8 +155,7 @@ def assign_quantisation(layers, ranges, input_range):
         layer.input_quant = current
         layer.output_quant = output_quant
 
-        # ReLU in the quantised domain clamps at the value that represents
-        # zero, which is the output zero point, not the byte zero.
+        # Quantised ReLU clamps at the output zero point, not the byte zero.
         layer.activation_min = (
             output_quant.zero_point if layer.relu else INT8_MIN
         )
@@ -268,12 +251,7 @@ def run_layer_fp32(layer: LayerSpec, x: np.ndarray) -> np.ndarray:
 
 
 def run_reference(layers, features_2d: np.ndarray, input_quant: QuantTensor, precision):
-    """Full forward pass with a per layer precision list, as T4 does at runtime.
-
-    precision is a list of "int8" or "fp32", one per layer. At a boundary where
-    the precision changes, the activation is converted using the fixed boundary
-    scale, which is exactly the rule the device applies.
-    """
+    """Forward pass with a per layer precision list, converting at boundaries as T4 does."""
     x_q = input_quant.quantise(features_2d[..., None])
     state, mode = x_q, "int8"
 
@@ -287,9 +265,7 @@ def run_reference(layers, features_2d: np.ndarray, input_quant: QuantTensor, pre
             mode = "fp32"
 
         if layer.kind == FULLY_CONNECTED:
-            # Global average pool over the spatial dims feeds the classifier.
-            # In int8 the pool happens in the quantised domain, which is exact
-            # enough because the zero point cancels through an average.
+            # Global average pool feeds the classifier, exact enough in int8 since the zero point cancels.
             if mode == "int8":
                 pooled = np.round(state.astype(np.float32).mean(axis=(0, 1), keepdims=True))
                 state = np.clip(pooled, -128, 127).astype(np.int8)
@@ -304,3 +280,5 @@ def run_reference(layers, features_2d: np.ndarray, input_quant: QuantTensor, pre
     if mode == "int8":
         return layers[-1].output_quant.dequantise(state).reshape(-1)
     return np.asarray(state, dtype=np.float32).reshape(-1)
+
+            # Global average pool feeds the classifier, exact in int8 since the zero point cancels.

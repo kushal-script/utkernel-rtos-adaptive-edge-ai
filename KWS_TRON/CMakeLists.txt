@@ -4,12 +4,11 @@ project(KWS_TRON C CXX ASM)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 17)
 
-# ── Linker script ────────────────────────────────────────────────────────────
+# Linker script
 set(LINKER_SCRIPT ${CMAKE_SOURCE_DIR}/STM32H533RETX_FLASH.ld)
 
-# ── Source files ─────────────────────────────────────────────────────────────
-# CONFIGURE_DEPENDS so a newly added source is picked up without a manual
-# reconfigure, which is otherwise a confusing undefined reference at link time.
+# Source files
+# CONFIGURE_DEPENDS picks up new sources without a manual reconfigure.
 file(GLOB_RECURSE APP_SOURCES CONFIGURE_DEPENDS
     "app/*.c"
     "audio/*.c"
@@ -25,7 +24,7 @@ file(GLOB_RECURSE HAL_SOURCES
     "Drivers/STM32H5xx_HAL_Driver/Src/*.c"
 )
 
-# µT-Kernel kernel + lib: GLOB_RECURSE is fine — no platform variants here
+# µT-Kernel kernel and lib, no platform variants, so a glob is safe
 file(GLOB_RECURSE MTK3_KERNEL_SOURCES
     "mtk3/mtk3_bsp2/mtkernel/kernel/*.c"
     "mtk3/mtk3_bsp2/mtkernel/kernel/*.s"
@@ -36,10 +35,7 @@ file(GLOB_RECURSE MTK3_KERNEL_SOURCES
     "mtk3/mtk3_bsp2/mtkernel/device/*.c"
 )
 
-# µT-Kernel BSP sysdepend: EXPLICIT list for STM32H533 (Cortex-M33 = ARMv8-M)
-# Must NOT use GLOB_RECURSE here — the tree contains all STM32 family variants
-# (stm32f4/f7/g4/h7/l4/h5/n6) and all board tm_com files. Including all of them
-# causes multiply-defined symbols at link time.
+# BSP sysdepend listed explicitly, the tree holds every STM32 family and a glob multiply defines symbols
 set(MTK3_BSP_DIR mtk3/mtk3_bsp2/sysdepend/stm32_cube)
 set(MTK3_SOURCES
     ${MTK3_KERNEL_SOURCES}
@@ -80,7 +76,7 @@ add_executable(${PROJECT_NAME}
 )
 set_target_properties(${PROJECT_NAME} PROPERTIES SUFFIX ".elf")
 
-# ── Include paths ─────────────────────────────────────────────────────────────
+# Include paths
 target_include_directories(${PROJECT_NAME} PRIVATE
     Core/Inc
     app
@@ -109,27 +105,25 @@ target_include_directories(${PROJECT_NAME} PRIVATE
     mtk3/mtk3_bsp2/sysdepend/stm32_cube/lib/libtm/nucleo_stm32h533
 )
 
-# ── Compile definitions ───────────────────────────────────────────────────────
+# Compile definitions
 target_compile_definitions(${PROJECT_NAME} PRIVATE
     STM32H533xx
     USE_HAL_DRIVER
-    # µT-Kernel 3.0 BSP2: selects H533 machine.h → defines MTKBSP_STM32CUBE,
-    # MTKBSP_CPU_CORE_ARMV8M, MTKBSP_CPU_STM32H533, etc.
+    # Selects the H533 machine.h of the µT-Kernel 3.0 BSP2
     _STM32CUBE_NUCLEO_H533_
 )
 
-# The transform and the inference kernels are in audio/, so no external DSP or
-# NN library is linked. Rationale is in docs/inference_core.md.
+# Transform and inference kernels live in audio/, no external DSP or NN library, see docs/inference_core.md.
 target_link_libraries(${PROJECT_NAME} m)
 
-# ── Linker flags ──────────────────────────────────────────────────────────────
+# Linker flags
 target_link_options(${PROJECT_NAME} PRIVATE
     -T${LINKER_SCRIPT}
     -Wl,-Map=${PROJECT_NAME}.map,--cref
     -Wl,--print-memory-usage
 )
 
-# ── Post-build: generate .hex and .bin ───────────────────────────────────────
+# Post build, .hex and .bin
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
     COMMAND ${CMAKE_OBJCOPY} -O ihex   $<TARGET_FILE:${PROJECT_NAME}> ${PROJECT_NAME}.hex
     COMMAND ${CMAKE_OBJCOPY} -O binary $<TARGET_FILE:${PROJECT_NAME}> ${PROJECT_NAME}.bin

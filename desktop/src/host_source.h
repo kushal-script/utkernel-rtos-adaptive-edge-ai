@@ -3,21 +3,15 @@
 #include <stddef.h>
 #include <stdint.h>
 
-/* Host side selection and control for the capture front end. The pipeline above
-   signal_source.h is unchanged and cannot tell the difference; only these
-   choices are new. */
+/* Host side choices for the capture front end, invisible above signal_source.h. */
 
-/* The stratified corpus that travels in the firmware, six clips alternating
-   keyword and silence. This is the default because it carries labels, so a run
-   can score itself the way the board does. */
+/* The six clip labelled corpus the firmware carries, the default because it scores itself. */
 void host_source_use_corpus(void);
 
-/* An arbitrary 16 kHz mono WAV. Classifications are still produced but nothing
-   is scored, because a file supplied at run time carries no ground truth. */
+/* A 16 kHz mono WAV, classified but not scored. */
 int  host_source_use_wav(const char *path, char *err, size_t errlen);
 
-/* Wall clock pacing multiplier. One is real time, which is the honest default
-   because the capture cadence is part of what the controller regulates. */
+/* Wall clock pacing multiplier, one is real time. */
 void host_source_set_speed(double speed);
 
 void host_source_start_producer(void);

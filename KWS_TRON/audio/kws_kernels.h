@@ -4,26 +4,11 @@
 
 #include "kws_layer.h"
 
-/* Layer kernels for the inference core, one INT8 and one FP32 form each.
-
-   Tensors are NHWC and weights are OHWI, except depthwise weights which are
-   1HWC, matching the layout the exporter emits. The INT8 path reproduces the
-   arithmetic in model/kws/convert.py exactly, including the requantisation
-   rounding, so the NumPy reference there is the golden model the device is
-   checked against. */
+/* Layer kernels, INT8 and FP32; NHWC tensors, OHWI weights, 1HWC depthwise, as model/kws/convert.py. */
 
 int32_t kws_requantise(int32_t accumulator, int32_t multiplier, int32_t shift);
 
-/* The INT8 kernels take a folded accumulator table alongside the raw bias,
-   folded[oc] = bias[oc] + input_offset * sum(weights[oc]). For outputs whose
-   whole kernel window is inside the input the offset add then vanishes from
-   the inner loop, which is what lets the loop run as packed pairs. Outputs
-   touching the padding take the same path when a per kernel row weight sum
-   table is supplied, rowsum[oc * kernel_h + kh], by subtracting the weights
-   of the taps that fall outside; without it they use the original per element
-   arithmetic. Every path is bit identical to the unfolded form, which
-   tools/verify_device_core.py checks over the evaluation set. Pass NULL for
-   either table to use the original path throughout. */
+/* INT8 kernels take folded and row sum tables, NULL for either uses the plain path, all bit identical. */
 void kws_conv_int8(const kws_layer_t *layer, const int8_t *input,
                    const int8_t *weights, const int32_t *bias,
                    const int32_t *folded, const int32_t *rowsum,
@@ -41,16 +26,13 @@ void kws_depthwise_fp32(const kws_layer_t *layer, const float *input,
 void kws_fully_connected_fp32(const kws_layer_t *layer, const float *input,
                               const float *weights, const float *bias, float *output);
 
-/* Global average pool over height and width, channels preserved. Dimensions
-   are passed explicitly because the pool runs on the tensor produced by the
-   previous layer, not on the shape declared by the layer that consumes it. */
+/* Global average pool, dimensions passed because it runs on the previous layer's tensor. */
 void kws_avgpool_int8(const int8_t *input, int8_t *output,
                       int32_t height, int32_t width, int32_t channels);
 void kws_avgpool_fp32(const float *input, float *output,
                       int32_t height, int32_t width, int32_t channels);
 
-/* Boundary conversions used when consecutive layers run at different
-   precision. The scale is fixed at export, so a switch preserves meaning. */
+/* Boundary conversions, the scale is fixed at export so a switch preserves meaning. */
 void kws_dequantise(const int8_t *input, float *output, uint32_t count,
                     float scale, int32_t zero_point);
 void kws_quantise(const float *input, int8_t *output, uint32_t count,

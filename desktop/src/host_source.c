@@ -10,18 +10,7 @@
 #include "uthread.h"
 #include "wav.h"
 
-/* The capture front end for the host, behind the same header the board uses.
-
-   On the board TIM6 paces GPDMA1 through two linked list nodes that ping pong
-   between the halves of one buffer, and the transfer complete interrupt sets an
-   event flag. Here a producer thread fills the same buffer at the same cadence
-   and sets the same flag, so every consumer above this line sees exactly what it
-   sees on hardware: one interrupt per filled block, two halves, the same
-   overrun handshake, and the same corpus offsets behind the labels.
-
-   The producer is the one thread that genuinely runs alongside the tasks rather
-   than taking the kernel's running token, which is the right shape, because the
-   DMA it stands in for is also outside the scheduler. */
+/* Host capture front end, a producer thread standing in for the timer paced DMA, see desktop/README.md. */
 
 static int16_t capture[T1_CAPTURE_SAMPLES];
 
@@ -35,11 +24,9 @@ static volatile uint32_t replay_offset;
 static volatile uint32_t node_offset[2];
 static volatile uint32_t completed_corpus;
 static volatile uint32_t node_turn;
-/* Width of the block that was actually published, which is not always the
-   current window: a resize changes the window while a block is in flight. */
+/* Width of the block actually published, a resize can land while one is in flight. */
 static volatile uint32_t filled_samples = T1_WINDOW_DEFAULT;
-/* Bumped by every restage. The producer drops a block whose parameters changed
-   under it, which is what aborting the DMA channel does on the board. */
+/* Bumped by every restage, the producer drops a block whose parameters changed. */
 static volatile uint32_t config_gen;
 
 static const int16_t *corpus       = replay_samples;
@@ -53,8 +40,7 @@ static char           description[256] = "built in replay corpus";
 static double        speed = 1.0;
 static uthread_t     producer;
 static volatile int  producer_run;
-/* Held shut until the pipeline calls signal_source_start, so the first block
-   lands when the firmware asks for capture rather than before it is ready. */
+/* Held until signal_source_start. */
 static volatile int  producer_paused = 1;
 static int           producer_started;
 
@@ -82,9 +68,7 @@ uint32_t signal_source_completed_corpus(void)
     return completed_corpus;
 }
 
-/* Ported unchanged from the device source, because which clip a classification
-   is scored against is the whole ground truth story and a paraphrase here would
-   quietly change what the accuracy figure means. */
+/* Ported unchanged from the device source, it defines what the accuracy figure means. */
 int signal_source_label_for_span(uint32_t end_offset, uint32_t span)
 {
     if (clip_count == 0u) {
@@ -130,8 +114,7 @@ static uint32_t advance_offset(uint32_t samples)
     return next;
 }
 
-/* The host stand in for the transfer complete interrupt, doing exactly what the
-   device callback does and in the same order. */
+/* Host stand in for the transfer complete interrupt, same steps in the same order. */
 static void block_complete(uint32_t width)
 {
     uint32_t finished = node_turn;
@@ -188,9 +171,7 @@ static void producer_entry(void *arg)
         if (!producer_run) {
             break;
         }
-        /* A restage while this block was in flight invalidates it: the half,
-           the width and the corpus offset all moved. Drop it rather than
-           publish a block that describes none of them. */
+        /* A restage mid flight invalidates the block, drop it. */
         if (gen != config_gen) {
             next_us = umonotonic_us();
             continue;
@@ -255,9 +236,7 @@ ER signal_source_set_window(uint32_t samples)
     if (samples < T1_WINDOW_MIN || samples > T1_WINDOW_MAX) {
         return E_PAR;
     }
-    /* Resume where playback had reached, as on the board, because restarting
-       from the beginning would stop the corpus advancing once the controller
-       resizes regularly and would invalidate every label. */
+    /* Resume where playback reached, as on the board. */
     uint32_t resume = replay_offset;
     return start_at(samples, resume);
 }

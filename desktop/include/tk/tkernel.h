@@ -3,12 +3,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-/* The subset of the uT-Kernel 3.0 API the pipeline actually calls, declared so
-   the five task sources compile against a host implementation without being
-   edited. Types and constants mirror the vendored kernel headers under
-   KWS_TRON/mtk3 exactly, because the same sources must build for both. The
-   implementation is in desktop/src/ukernel.c and the divergences it cannot
-   avoid are listed in desktop/README.md. */
+/* The uT-Kernel 3.0 subset the pipeline calls, mirroring KWS_TRON/mtk3, see desktop/README.md. */
 
 typedef signed char         B;
 typedef short               H;
@@ -73,8 +68,7 @@ typedef intptr_t            VP_INT;
 #define TWF_CLR     (0x00000010u)
 #define TWF_BITCLR  (0x00000020u)
 
-/* A mailbox message begins with this header, which the kernel uses as its queue
-   link, so the sender's storage must outlive the send. */
+/* Message header the kernel links through, the sender's storage must outlive the send. */
 typedef struct t_msg {
     void *msgque[1];
 } T_MSG;
@@ -133,8 +127,7 @@ ER  tk_slp_tsk(TMO tmout);
 ER  tk_sus_tsk(ID tskid);
 ER  tk_rsm_tsk(ID tskid);
 
-/* Host side control, not part of the kernel API. The CLI uses these to stand
-   the kernel up, run the task set for a bounded time, and tear it down. */
+/* Host side control for the CLI, not part of the kernel API. */
 void ukernel_init(void);
 /* Identifier of the calling task, or zero when the caller is not one. */
 ID   ukernel_self_id(void);

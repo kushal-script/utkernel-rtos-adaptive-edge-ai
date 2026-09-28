@@ -4,10 +4,7 @@
 #include <stdbool.h>
 #include <string.h>
 
-/* Four int8 multiply accumulates on contiguous operands. On the Cortex-M33 the
-   DSP extension does this as two packed halfword multiplies after byte
-   unpacking. The C form computes the identical int32 sum, so the host build
-   checks the same arithmetic the board runs. */
+/* Four int8 multiply accumulates, packed through the DSP extension on the M33, plain C on a host. */
 #if defined(__ARM_FEATURE_DSP) && defined(__arm__)
 static inline int32_t dot4(const int8_t *a, const int8_t *b, int32_t acc)
 {
@@ -49,9 +46,7 @@ int32_t kws_requantise(int32_t accumulator, int32_t multiplier, int32_t shift)
     int32_t left  = shift > 0 ? shift : 0;
     int32_t right = shift < 0 ? -shift : 0;
 
-    /* Shifted through an unsigned intermediate because the accumulator is
-       routinely negative and left shifting a negative value is undefined. The
-       bits are the sign extended ones either way, so the result is unchanged. */
+    /* Shift through unsigned, a left shift of a negative value is undefined. */
     int64_t value = (int64_t)((uint64_t)accumulator << left);
     value = (value * (int64_t)multiplier + ((int64_t)1 << 30)) >> 31;
 
@@ -62,13 +57,7 @@ int32_t kws_requantise(int32_t accumulator, int32_t multiplier, int32_t shift)
     return (int32_t)value;
 }
 
-/* Round to nearest even, the rounding lrintf performs under the default
-   floating point environment. On the Cortex-M33 FPU that is one VCVTR
-   instruction; the newlib lrintf the compiler otherwise calls is a software
-   routine of about thirty cycles, and this runs once per element at every
-   precision boundary, so the difference is milliseconds per mixed inference.
-   Both produce the same integer for every value in range, and every caller
-   here clamps to int8 straight after. */
+/* Round to nearest even as lrintf does, one VCVTR on the M33 FPU instead of a software call. */
 #if defined(__arm__) && defined(__ARM_FP) && (__ARM_FP & 4)
 static inline int32_t round_to_int(float value)
 {
@@ -110,9 +99,7 @@ void kws_conv_int8(const kws_layer_t *layer, const int8_t *input,
             for (int32_t oc = 0; oc < out_c; oc++) {
                 int32_t acc;
                 if (inside && folded != NULL) {
-                    /* Whole window in bounds: the offset term is already in
-                       folded[oc], and each kernel row reads a contiguous run
-                       of kw_n * in_c samples against contiguous weights. */
+                    /* Whole window in bounds, contiguous rows against the folded term. */
                     acc = folded[oc];
                     const int8_t *wt = &weights[oc * kh_n * row_len];
                     for (int32_t kh = 0; kh < kh_n; kh++) {
@@ -120,14 +107,7 @@ void kws_conv_int8(const kws_layer_t *layer, const int8_t *input,
                         acc = dot_run(in_row, &wt[kh * row_len], row_len, acc);
                     }
                 } else if (folded != NULL && rowsum != NULL) {
-                    /* Window partly outside the input. Padding reads as zero
-                       in real space, so a tap outside contributes nothing,
-                       but the folded term pre added input_offset times every
-                       tap's weight, so the weights of the missing taps are
-                       taken back out. The taps inside then run as the same
-                       contiguous dot products the whole window case uses.
-                       Bit identical to the plain path: the same integers,
-                       regrouped. */
+                    /* Window overlaps the padding, subtract the missing taps' weights and take the same path. */
                     const int32_t kh_lo = ih0 < 0 ? -ih0 : 0;
                     const int32_t kh_hi = ih0 + kh_n > in_h ? in_h - ih0 : kh_n;
                     const int32_t kw_lo = iw0 < 0 ? -iw0 : 0;
@@ -369,10 +349,7 @@ void kws_dequantise(const int8_t *input, float *output, uint32_t count,
 void kws_quantise(const float *input, int8_t *output, uint32_t count,
                   float scale, int32_t zero_point)
 {
-    /* Multiply by the reciprocal rather than divide per element. A single
-       precision divide is an order of magnitude more expensive than a multiply
-       on this core, and this loop runs over the whole activation tensor at
-       every precision boundary, so it is the dominant cost of a mixed mask. */
+    /* Multiply by the reciprocal, a divide per element costs an order of magnitude more. */
     const float inv_scale = 1.0f / scale;
     for (uint32_t i = 0; i < count; i++) {
         int32_t q = round_to_int(input[i] * inv_scale) + zero_point;

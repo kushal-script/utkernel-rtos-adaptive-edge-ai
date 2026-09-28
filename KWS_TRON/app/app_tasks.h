@@ -2,8 +2,7 @@
 
 #include <tk/tkernel.h>
 
-/* Task identifiers, published so the controller can change a task's priority
-   at runtime. Created once in usermain, never destroyed. */
+/* Task identifiers, so the controller can change priorities at runtime. */
 
 extern ID tskid_t1;
 extern ID tskid_t2;

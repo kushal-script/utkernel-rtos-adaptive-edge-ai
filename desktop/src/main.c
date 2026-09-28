@@ -24,10 +24,7 @@
 #include "t5_controller.h"
 #include "uthread.h"
 
-/* The desktop front end. It boots the same five tasks the board runs, on the
-   host kernel in ukernel.c, and reports what they did. Nothing in KWS_TRON is
-   modified or reimplemented here: the tasks, the controller, the feature stage
-   and the inference core are the firmware sources compiled for this machine. */
+/* Desktop front end, the firmware's five tasks on the host kernel in ukernel.c, unmodified. */
 
 #define ALL_FP32_MASK ((1u << KWS_NUM_LAYERS) - 1u)
 #define CONVERGED_REF 0x0AAu
@@ -40,8 +37,7 @@ typedef struct {
     int         trace;
 } options_t;
 
-/* The controller changes T4's priority by identifier, so these are the same
-   globals usermain publishes on the board. */
+/* Task identifiers the controller changes priorities by, as usermain publishes them. */
 ID tskid_t1, tskid_t2, tskid_t3, tskid_t4, tskid_t5;
 ID tskid_heartbeat, tskid_bench;
 
@@ -135,8 +131,7 @@ static int boot_pipeline(const options_t *opt, device_costs_t *costs)
         }
     }
 
-    /* Only T4's cycle reads are the bracketed per layer sequence the replay
-       depends on; T3 times feature frames on the same counter. */
+    /* Only T4's reads follow the bracketed sequence the replay depends on. */
     host_clock_set_inference_task(tskid_t4);
 
     host_source_start_producer();
@@ -260,10 +255,7 @@ static int cmd_run(const options_t *opt)
                 printf("  decision %-5u %s -> %s  %s\n",
                        (unsigned)e->decision, before, after,
                        e->mask_before == e->mask_after ? "settled" : "moved");
-                /* Flushed because a trace is worth watching as it happens, and
-                   stdout is fully buffered whenever it is not a terminal, so a
-                   redirected or piped run would otherwise show nothing until
-                   the process exits. */
+                /* Flush, stdout is fully buffered when not a terminal. */
                 fflush(stdout);
             }
         }

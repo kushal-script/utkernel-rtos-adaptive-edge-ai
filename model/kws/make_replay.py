@@ -1,17 +1,4 @@
-"""Build the replay corpus the device streams through its capture path.
-
-The corpus decides what the pipeline can demonstrate. A run of identical
-keywords exercises the classifier and nothing else: the voice activity gate
-never closes, so the branch that skips feature extraction and inference on
-silence, which is where the power saving comes from, is never entered.
-
-This picks a stratified set that alternates keyword and silence, so a run
-crosses the gate in both directions and the quiescent path is exercised as much
-as the active one. Clips come from the corpus test split, so they are audio the
-model was never trained on.
-
-    python -m kws.make_replay --clips 6
-"""
+"""Build the replay corpus from the test split, alternating keyword and silence."""
 
 import argparse
 from pathlib import Path
@@ -37,8 +24,7 @@ def build(root: Path, clips: int, seed: int, keywords: list):
     silence_index = LABELS.index(SILENCE)
     chosen, chosen_labels = [], []
 
-    # Alternate keyword and silence so the gate is crossed repeatedly rather
-    # than once. An odd clip count ends on a keyword, which is harmless.
+    # Alternate keyword and silence so the gate is crossed repeatedly.
     wanted = []
     for i in range(clips):
         if i % 2 == 1:
@@ -56,9 +42,7 @@ def build(root: Path, clips: int, seed: int, keywords: list):
 
     waves, labels = corpus.materialise(chosen, chosen_labels, augment=False)
 
-    # Silence from the corpus is background noise at a random level, which can
-    # be loud enough to hold the gate open. Attenuate it so it is unambiguously
-    # quiescent, which is what makes the gate's behaviour readable.
+    # Attenuate corpus silence so it is unambiguously quiescent.
     for i, label in enumerate(labels):
         if label == silence_index:
             waves[i] = waves[i] * 0.05

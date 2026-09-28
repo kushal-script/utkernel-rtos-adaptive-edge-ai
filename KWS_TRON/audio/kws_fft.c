@@ -2,13 +2,7 @@
 
 #include <math.h>
 
-/* Decimation in time radix 2, iterative, with a precomputed twiddle table and
-   a bit reversal permutation table. Both tables are built once at startup.
-
-   The transform is complex of length FFT_SIZE with the imaginary part of the
-   input set to zero. That is simpler and easier to verify than a packed real
-   transform of half the length, and the cost is measured by the benchmark
-   rather than assumed, so the honest number is what gets reported. */
+/* Iterative radix 2 decimation in time, complex input with zero imaginary part, tables built once. */
 
 static float twiddle_re[FFT_SIZE / 2];
 static float twiddle_im[FFT_SIZE / 2];

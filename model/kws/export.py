@@ -1,14 +1,4 @@
-"""Emit the trained model as C the firmware compiles directly.
-
-Produces audio/kws_model.h and audio/kws_model.c holding, for every layer, an
-INT8 copy with per channel requantisation parameters and an FP32 copy, plus a
-descriptor table the device core walks. Both precisions are present because T4
-selects precision per layer at runtime.
-
-Also emits the MFCC tables so the device never recomputes the window, mel
-filterbank, or DCT matrix, which keeps device features bit comparable with the
-host reference.
-"""
+"""Emit the trained model, the MFCC tables, and the evaluation and replay sets as C for the firmware."""
 
 import numpy as np
 
@@ -47,12 +37,7 @@ def _c_array(name, values, ctype, per_line=12, fmt=None):
 
 
 def sparse_filterbank(filterbank: np.ndarray):
-    """Triangular mel filters touch a handful of bins each, so store only those.
-
-    Returns (start, length, weights). Every band is contiguous, which is a
-    property of triangular filters on a monotonic frequency grid, and is
-    asserted here because the device loop depends on it.
-    """
+    """Sparse triangular mel filters as (start, length, weights), each band contiguous."""
     starts, lengths, weights = [], [], []
     for row in filterbank:
         nonzero = np.nonzero(row)[0]
@@ -164,19 +149,13 @@ extern const float kws_feature_std[KWS_INPUT_MFCC];
 
 
 def _folded_slots(layers):
-    """Slots fold_bias_tables consumes: one per output channel, depthwise excepted.
-
-    Mirrors the loop in KWS_TRON/audio/kws_infer.c. The two must agree, which is
-    what the _Static_assert on the device side enforces.
-    """
+    """Folded slots, one per output channel except depthwise, mirroring kws_infer.c."""
     return sum(int(layer.out_shape[2]) for layer in layers
                if layer.kind != DEPTHWISE)
 
 
 def _rowsum_slots(layers):
-    """Slots the clipped window path needs: out_c times kernel_h for every
-    padded convolution. Mirrors fold_bias_tables in KWS_TRON/audio/kws_infer.c.
-    """
+    """Row sum slots, out_c times kernel_h per padded convolution, mirroring kws_infer.c."""
     return sum(int(layer.out_shape[2]) * int(layer.kernel[0]) for layer in layers
                if layer.kind == CONV and (layer.padding[0] or layer.padding[1]))
 
@@ -257,12 +236,7 @@ def emit_model_source(layers, labels, cfg, input_quant, mean, std) -> str:
 
 
 def emit_replay_data(clips, labels, label_names, cfg: FeatureConfig) -> str:
-    """Emit waveform clips as int16 PCM for the timer paced DMA replay source.
-
-    These stand in for a live sensor. The DMA path, the half transfer
-    interrupt, and the event flag handoff are identical to the microphone case,
-    only the data origin differs. See docs/signal_source.md.
-    """
+    """Emit waveform clips as int16 PCM for the replay source, see docs/signal_source.md."""
     samples = np.concatenate(
         [np.clip(np.round(clip * 32767.0), -32768, 32767) for clip in clips]
     ).astype(np.int16)
@@ -428,10 +402,7 @@ def main():
         emit_eval_set(eval_q, test_y[picks].astype(np.uint8), cfg)
     )
 
-    # Prefer the stratified corpus from make_replay.py, which alternates
-    # keyword and silence so the voice activity gate is exercised in both
-    # directions. Fall back to the raw clips in the feature cache, which are in
-    # bucket order and therefore all one word.
+    # Prefer the stratified corpus from make_replay.py, fall back to the raw cache clips.
     replay_path = cache_dir / "replay_clips.npz"
     if replay_path.exists():
         clips = np.load(replay_path)
@@ -444,12 +415,7 @@ def main():
         raw = None
 
     if raw is not None:
-        # The stratified corpus is built as a whole: alternating keyword and
-        # silence is the property that makes the gate observable, and half a
-        # corpus is not half as useful, it is a different experiment. So it is
-        # used entire unless a count is passed. A default that disagreed with
-        # make_replay's is what previously let an export silently emit three
-        # clips from a six clip corpus and change what the firmware replays.
+        # The stratified corpus is used whole unless a count is passed.
         take = len(raw) if args.replay_clips is None else min(args.replay_clips, len(raw))
         if take != len(raw):
             print(f"WARNING replay corpus truncated to {take} of {len(raw)} clips")

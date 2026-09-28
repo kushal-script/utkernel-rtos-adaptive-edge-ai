@@ -18,10 +18,7 @@ if(NOT EXISTS "${FIRMWARE}/app/t1_ingest.c")
         "-DFIRMWARE=<path to KWS_TRON>.")
 endif()
 
-# Listed rather than globbed on purpose. A glob over app/ would sweep in
-# signal_source.c and app_main.c, the two files that talk to the ST HAL and the
-# GPIO, and bury the build in CMSIS errors. Those two are the only firmware
-# sources this target replaces.
+# Listed, not globbed: signal_source.c and app_main.c touch the HAL and are the two files replaced here.
 set(FIRMWARE_SOURCES
     ${FIRMWARE}/app/t1_ingest.c
     ${FIRMWARE}/app/t2_variance.c
@@ -62,10 +59,7 @@ target_include_directories(kws-desktop PRIVATE
 
 target_compile_definitions(kws-desktop PRIVATE _USE_MATH_DEFINES)
 
-# Floating point contraction must be off. With it on, an Apple Silicon host and
-# an x86-64 host disagree on every FP32 sample, because one fuses a multiply and
-# an add that the other does not. Off, the two agree exactly, which is what
-# makes a result reproducible between machines.
+# Floating point contraction off, or arm64 and x86-64 hosts disagree on FP32 results.
 if(NOT MSVC)
     target_compile_options(kws-desktop PRIVATE
         -Wall -Wextra -ffp-contract=off)

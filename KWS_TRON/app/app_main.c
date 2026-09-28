@@ -81,9 +81,7 @@ EXPORT INT usermain(void)
         };
         ID id = tk_cre_tsk(&ctsk);
         if (id < E_OK) {
-            /* Fatal rather than skipped. An uncreated identifier stays zero,
-               and zero means the calling task, so a later priority change would
-               silently retarget whoever made the call. */
+            /* Fatal: an uncreated identifier is zero, which would retarget priority changes to the caller. */
             tm_printf((UB *)"usermain: create %s failed %d, halting\n",
                       task_table[i].name, (int)id);
             tk_slp_tsk(TMO_FEVR);

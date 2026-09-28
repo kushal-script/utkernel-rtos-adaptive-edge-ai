@@ -1,18 +1,4 @@
-"""Compile the device core for the host and check it against the reference.
-
-The C in KWS_TRON/audio is the code that runs on the board. This builds it with
-the host compiler and checks two things:
-
-1. The transform agrees with the NumPy front end the model was trained on.
-2. The inference core reaches the expected accuracy on the evaluation set that
-   travels in flash, under every precision configuration, and reproduces the
-   golden reference logits.
-
-A failure here is a bug in the C, found in seconds, without a board. Run it
-after touching anything under KWS_TRON/audio:
-
-    python tools/verify_device_core.py
-"""
+"""Compile the device core for the host and check the transform and inference against the reference."""
 
 import subprocess
 import sys
@@ -79,9 +65,7 @@ STEM_HARNESS = r"""
 #include "kws_model.h"
 #include "kws_kernels.h"
 #include "eval_set.h"
-/* The padded convolution both ways over every evaluation grid: the clipped
-   window path with the folded and row sum tables, and the original bounds
-   checked path with neither. They must agree to the byte. */
+/* Clipped and plain paths over every evaluation grid, they must agree to the byte. */
 int main(void){
     const kws_layer_t *L = &kws_layers[0];
     static int32_t folded[4096], rowsum[4096];
@@ -226,11 +210,7 @@ def check_inference(work: Path) -> bool:
 
 
 def check_stem_border(work: Path) -> bool:
-    """The clipped window path of the padded convolution against the plain path.
-
-    Accuracy cannot catch a one bit difference here, so this compares the stem's
-    int8 output byte for byte over the whole evaluation set.
-    """
+    """The stem's int8 output byte for byte, clipped window path against the plain path."""
     binary = compile_harness(
         work, "stem_check", STEM_HARNESS, ["kws_kernels.c", "kws_model.c", "eval_set.c"],
     )

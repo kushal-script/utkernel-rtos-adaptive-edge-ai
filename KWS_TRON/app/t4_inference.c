@@ -14,9 +14,7 @@
 t4_stats_t t4_stats;
 t4_cost_table_t t4_cost_table;
 
-/* Calibration runs the first two inferences at the two pure precisions so the
-   controller starts from measurement rather than from an assumption. Two
-   inferences is about a third of a second and happens once at startup. */
+/* The first two inferences run the two pure precisions, so the controller starts from measurement. */
 #define CALIBRATION_INFERENCES 2
 static uint32_t calibration_step;
 
@@ -36,8 +34,7 @@ uint32_t t4_estimate_cycles(uint32_t mask)
     return total;
 }
 
-/* Overrides the weak stub in the core, so the timing the core records is the
-   hardware cycle counter rather than zero. */
+/* Overrides the core's weak stub with the hardware cycle counter. */
 uint32_t kws_cycle_counter(void)
 {
     return dwt_read();
@@ -61,11 +58,7 @@ uint32_t t4_layer_weight_bytes(const kws_layer_t *layer, uint32_t precision)
     return precision == KWS_PRECISION_FP32 ? elements * sizeof(float) : elements;
 }
 
-/* Overrides the weak stub in the core. Each layer's weights are copied from
-   flash into a pool block for the duration of that layer and released
-   immediately after, so peak SRAM holds one layer rather than the whole model.
-   With a flash resident model this demonstrates the mechanism and gives the
-   number to report, see docs/inference_core.md for what it buys and when. */
+/* Overrides the core's weak stub, streaming each layer's weights through a pool block, see docs/inference_core.md. */
 const void *kws_weights_acquire(const kws_layer_t *layer, uint32_t precision,
                                 uint32_t *bytes)
 {
@@ -77,8 +70,7 @@ const void *kws_weights_acquire(const kws_layer_t *layer, uint32_t precision,
     void *block = NULL;
     if (tk_get_mpl(mplid_layer, (SZ)needed, &block, TMO_POL) != E_OK ||
         block == NULL) {
-        /* Pool exhausted, fall back to reading straight from flash so an
-           inference is never dropped. The benchmark records the event. */
+        /* Pool exhausted, read from flash so an inference is never dropped. */
         return precision == KWS_PRECISION_FP32 ? (const void *)layer->weight_fp32
                                                : (const void *)layer->weight_int8;
     }
@@ -122,8 +114,7 @@ void t4_inference_task(INT stacd, void *exinf)
             continue;
         }
 
-        /* While calibrating, force the pure precisions and enforce no deadline,
-           so the two probe inferences are never mistaken for overruns. */
+        /* Calibration forces the pure precisions and enforces no deadline. */
         bool calibrating = calibration_step < CALIBRATION_INFERENCES;
         uint32_t all_fp32 = (KWS_NUM_LAYERS >= 32)
                                 ? 0xFFFFFFFFu
@@ -132,9 +123,7 @@ void t4_inference_task(INT stacd, void *exinf)
                                     : adapt_state.precision_mask;
         uint32_t deadline = calibrating ? 0u : adapt_state.deadline_cycles;
 
-        /* One read of the pointer fixes both the tensor and the audio it came
-           from. A publication landing during this inference swaps the pointer
-           for the next tensor, it never touches this one. */
+        /* One pointer read fixes both the tensor and the audio it came from. */
         const int8_t *grid = t3_feature_grid;
         kws_infer(grid, mask, deadline, &t4_stats.last);
 
@@ -156,9 +145,7 @@ void t4_inference_task(INT stacd, void *exinf)
             t4_stats.worst_cycles = t4_stats.last.total_cycles;
         }
 
-        /* Score against the clip this tensor holds, not the clip the DMA is
-           staging now, which is up to a second ahead of it, and not the tensor
-           published since, which under a slow configuration is the usual case. */
+        /* Score against the clip this tensor holds, not the one being staged now. */
         int label = signal_source_label_for_span(t3_grid_corpus_end(grid),
                                                  KWS_GRID_SPAN_SAMPLES);
         t4_stats.last_label = label;
@@ -169,9 +156,7 @@ void t4_inference_task(INT stacd, void *exinf)
             }
         }
 
-        /* Both bits in one call. The controller outranks this task, so two
-           calls would let it wake between them and count one late inference
-           as two decisions and two misses. */
+        /* Both bits in one call, so a late inference is one decision and one miss. */
         UINT done = FLG_INFERENCE_DONE;
         if (t4_stats.last.overran) {
             t4_stats.overruns++;

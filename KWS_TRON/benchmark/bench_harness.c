@@ -70,10 +70,7 @@ void bench_task(INT stacd, void *exinf)
     (void)stacd;
     (void)exinf;
 
-    /* Wait for the controller to settle rather than for a fixed delay, so the
-       benchmark always describes a converged operating point. The elapsed time
-       and the block count together give the capture rate, which is the check
-       that the timer is really pacing the DMA. */
+    /* Wait for convergence, not a fixed delay; elapsed time and block count give the capture rate. */
     uint32_t blocks_at_start = signal_source_block_count();
     uint64_t idle_at_start = bsp_idle_cycles();
     uint32_t idle_entries_at_start = bsp_idle_entries();
@@ -85,9 +82,7 @@ void bench_task(INT stacd, void *exinf)
     uint32_t blocks_seen_total = signal_source_block_count() - blocks_at_start;
     uint32_t block_rate_mhz = waited_ms ? (blocks_seen_total * 1000u) / waited_ms : 0;
 
-    /* Idle residency over the settle window. The elapsed cycle count is derived
-       from the kernel delay rather than the cycle counter, which wraps every
-       seventeen seconds at this clock. */
+    /* Idle residency over the settle window, timed by the kernel delay since the cycle counter wraps. */
     uint64_t idle_delta = bsp_idle_cycles() - idle_at_start;
     uint32_t idle_events = bsp_idle_entries() - idle_entries_at_start;
     uint64_t elapsed_cycles = (uint64_t)waited_ms * (SYSTEM_CLOCK_HZ / 1000u);
@@ -103,11 +98,7 @@ void bench_task(INT stacd, void *exinf)
 
     tm_putstring((UB *)"BENCH_BEGIN\n");
 
-    /* Live phase. Each configuration drives the whole pipeline for a fixed
-       window, which is the only way to measure accuracy end to end rather than
-       on pre computed features, and the only way to compare configurations on
-       energy without an ammeter: less work per classification shows up as more
-       time asleep. */
+    /* Live phase, each configuration drives the whole pipeline for a fixed window. */
     static const struct {
         const char *name;
         uint32_t mask;
@@ -148,11 +139,7 @@ void bench_task(INT stacd, void *exinf)
     }
     adapt_state.pin_precision = 0;
 
-    /* Static phase. The core keeps its activation arenas in static storage, so
-       it is single instance; suspending the pipeline is what makes measuring it
-       safe. The producer is paused too, because leaving the DMA filling buffers
-       nobody drains counts every one of those blocks as a consumer overrun and
-       makes a clean pipeline look like a failing one. */
+    /* Static phase, pipeline and producer paused so the single instance core is measured alone. */
     signal_source_pause();
     const ID suspended[] = { tskid_t1, tskid_t2, tskid_t3, tskid_t4 };
     for (unsigned i = 0; i < sizeof(suspended) / sizeof(suspended[0]); i++) {
@@ -167,16 +154,13 @@ void bench_task(INT stacd, void *exinf)
     bench_run("fp32", all_fp32, 0, &run);
     report(&run);
 
-    /* The operating point the controller settled on, not whatever it happened
-       to be trying when the benchmark started. */
+    /* The operating point the controller settled on. */
     uint32_t settled_mask = t5_stats.converged ? t5_stats.converged_mask
                                                : adapt_state.precision_mask;
     bench_run("adaptive", settled_mask, adapt_state.deadline_cycles, &run);
     report(&run);
 
-    /* The measured per layer cost table the controller ranked layers by. This
-       is the evidence that the mixed operating point is not reachable by any
-       single precision compile. */
+    /* The measured per layer cost table the controller ranked layers by. */
     if (t4_cost_table.valid) {
         for (uint32_t l = 0; l < KWS_NUM_LAYERS; l++) {
             tm_printf((UB *)"BENCH_COST %u %s int8=%u fp32=%u saving=%d\n",
@@ -192,8 +176,7 @@ void bench_task(INT stacd, void *exinf)
                   (unsigned)settled_mask);
     }
 
-    /* The convergence transient, so the trajectory can be plotted and the
-       deadline misses during convergence counted rather than hidden. */
+    /* The convergence transient, so it can be plotted and its misses counted. */
     for (uint32_t i = 0; i < t5_trace_count; i++) {
         const t5_trace_t *row = &t5_trace[i];
         tm_printf((UB *)"BENCH_TRACE %u before=%04x after=%04x act=%u over=%u cycles=%u ewma=%u\n",

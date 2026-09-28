@@ -1,10 +1,4 @@
-"""STM32 ROM bootloader UART client (AN3155), used over the ST-LINK VCP.
-
-Deliberately minimal and conservative: sync, identify, optional sector erase
-(only the sectors the image covers, never mass erase), write in 256 byte
-chunks, full readback verify, then GO. No option byte commands exist in this
-file at all, so it cannot touch them.
-"""
+"""STM32 ROM bootloader UART client (AN3155): sector erase, write, verify, GO, never option bytes."""
 import os, sys, time
 import serial
 
@@ -31,12 +25,7 @@ def send_cmd(s, code):
     expect_ack(s, f"cmd {hex(code)}")
 
 def sync(s):
-    """Resync even if the bootloader is stuck mid transaction.
-
-    A burst of 0x7F completes any partially received write or read command,
-    whose checksum then fails, returning the bootloader to its command loop.
-    Then a normal init byte gets ACK or NACK, either of which means synced.
-    """
+    """Resync even if the bootloader is stuck mid transaction."""
     s.write(b"\x7f" * 320); s.flush()
     time.sleep(0.6)
     s.reset_input_buffer()

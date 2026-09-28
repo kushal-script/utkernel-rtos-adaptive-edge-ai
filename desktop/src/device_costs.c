@@ -33,8 +33,7 @@ static const uint32_t builtin_fp32[DEVICE_COST_LAYERS] = {
     1554517u, 4351029u, 1690260u, 4376615u, 4883u
 };
 
-/* Captures taken over serial carry CRLF, so a carriage return counts as a
-   separator and can never end up inside a layer name. */
+/* Serial captures carry CRLF, so a carriage return is a separator. */
 static int is_blank(char c)
 {
     return c == ' ' || c == '\t' || c == '\r' || c == '\n';
@@ -48,8 +47,7 @@ static const char *skip_blanks(const char *p)
     return p;
 }
 
-/* Reads digits only, so a sign is rejected, and stops the moment the value
-   would exceed uint32 rather than letting a corrupt capture wrap silently. */
+/* Digits only, stops before overflowing uint32. */
 static int read_u32(const char **cursor, uint32_t *value)
 {
     const char *p = *cursor;
@@ -128,8 +126,7 @@ int device_costs_load(const char *report_path, device_costs_t *out,
         return -1;
     }
 
-    /* layers stays zero until all ten indices have been seen, so a table from
-       a failed load totals to nothing instead of to a partial figure. */
+    /* Zero until all ten layers are seen, so a failed load totals nothing. */
     memset(out, 0, sizeof(*out));
     memset(seen, 0, sizeof(seen));
 

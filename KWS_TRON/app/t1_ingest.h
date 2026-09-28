@@ -4,10 +4,7 @@
 
 #include <tk/tkernel.h>
 
-/* T1, the ingest stage. It owns the capture hardware and nothing else. The
-   interrupt that fills a block is what wakes the rest of the pipeline, so this
-   task itself is idle almost all the time, blocked on the mailbox waiting for
-   the controller to resize the capture window. */
+/* T1, the ingest stage, owns the capture hardware and applies window resizes. */
 
 typedef struct {
     uint32_t window_samples;

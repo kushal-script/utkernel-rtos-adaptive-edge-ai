@@ -4,9 +4,7 @@
 
 #include "mfcc_config.h"
 
-/* One MFCC frame, free of any kernel dependency so it can be compiled and
-   checked against the NumPy front end on a host before it runs on the board.
-   T3 owns the scheduling and the grid, this owns only the arithmetic. */
+/* One MFCC frame, kernel free so it can be checked against the host front end. */
 
 void kws_features_init(void);
 

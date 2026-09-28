@@ -2,11 +2,7 @@
 
 #include <stdint.h>
 
-/* Layer descriptor executed by the T4 inference core. The exporter fills one
-   of these per layer with both an INT8 and an FP32 copy of the weights,
-   because precision is selected per layer at runtime. The boundary scales are
-   fixed at export time so switching a layer's precision never changes what the
-   numbers crossing that boundary mean. See docs/inference_core.md. */
+/* Layer descriptor, INT8 and FP32 weights since precision is chosen at runtime, see docs/inference_core.md. */
 
 typedef enum {
     KWS_LAYER_CONV = 0,
@@ -31,9 +27,7 @@ typedef struct {
     uint8_t  stride_h, stride_w;
     uint8_t  pad_h,    pad_w;
 
-    /* INT8 path. Weights are OHWI for convolution and pointwise, 1HWC for
-       depthwise, matching the CMSIS-NN layout. Multiplier and shift are per
-       output channel. */
+    /* INT8 path, OHWI weights, 1HWC for depthwise, per channel multiplier and shift. */
     const int8_t  *weight_int8;
     const int32_t *bias_int32;
     const int32_t *multiplier;

@@ -26,9 +26,7 @@ void kws_feature_frame(const int16_t *samples, float *mfcc_out)
 
     kws_fft_power(frame_buffer, power);
 
-    /* Each mel band covers a contiguous run of a few bins, so only those are
-       visited. Walking the whole spectrum per band would be around forty times
-       the work for an identical result. */
+    /* Each mel band covers a contiguous run of bins, so only those are visited. */
     const float *weight = mfcc_band_weight;
     for (uint32_t m = 0; m < MEL_BINS; m++) {
         const float *bin = &power[mfcc_band_start[m]];

@@ -1,13 +1,4 @@
-"""Depthwise separable CNN for keyword spotting.
-
-Follows the DS-CNN topology from ARM's Hello Edge work, which is the standard
-reference point for keyword spotting accuracy on Cortex-M, so the numbers this
-project reports can be compared against published ones. Batch norm is folded
-into the preceding convolution at export time, so the deployed graph is only
-convolution, depthwise convolution, pointwise convolution, ReLU, average pool,
-and one fully connected layer. That keeps the hand written device side core
-small and makes per layer precision switching tractable.
-"""
+"""DS-CNN keyword model after the Hello Edge topology, batch norm folded at export."""
 
 import torch
 import torch.nn as nn
@@ -64,13 +55,7 @@ class DSCNN(nn.Module):
 
 
 def mask_trailing_frames(features: torch.Tensor, active: torch.Tensor) -> torch.Tensor:
-    """Zero every frame at or beyond `active`, per sample.
-
-    The device computes only `active` feature frames when the controller
-    shrinks the window, and leaves the rest of the grid at zero. Training with
-    the same masking is what makes that a supported operating point rather than
-    feeding the model an input distribution it never saw. See docs/adaptation.md.
-    """
+    """Zero every frame at or beyond `active`, per sample, as the device does, see docs/adaptation.md."""
     n_frames = features.shape[-2]
     index = torch.arange(n_frames, device=features.device).view(1, 1, n_frames, 1)
     return features * (index < active.view(-1, 1, 1, 1)).to(features.dtype)

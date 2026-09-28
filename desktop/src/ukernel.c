@@ -7,24 +7,7 @@
 
 #include "uthread.h"
 
-/* A uT-Kernel 3.0 work alike for the host, faithful enough that the five task
-   sources run against it unmodified.
-
-   The board runs one core with a strictly priority preemptive kernel, so the
-   pipeline's behaviour depends on only one task being able to touch shared
-   state at a time. Real OS threads would break that, and the shared adaptation
-   state carries an explicit single core no lock rationale, so this shim keeps a
-   single running token: exactly one task thread is runnable at any instant, and
-   the token moves to the highest priority ready task at every kernel call. That
-   reproduces the device's dispatch points, which are also its system calls, and
-   it makes a run deterministic rather than dependent on host scheduling.
-
-   The one behaviour it does not reproduce is preemption in the middle of a
-   computation. On the board an interrupt can switch tasks between any two
-   instructions; here a switch happens only at a kernel call. The capture
-   producer is the exception and does run concurrently, because that is what the
-   DMA does. desktop/README.md states this alongside the rest of what a host run
-   may and may not claim. */
+/* uT-Kernel 3.0 work alike with a single running token, so dispatch is deterministic, see desktop/README.md. */
 
 #define MAX_TASKS   16
 #define MAX_FLAGS   16
@@ -123,9 +106,7 @@ static int better(const task_t *a, const task_t *b)
 
 static void dispatch_locked(void)
 {
-    /* Shutdown stops handing the token out at all, so a task inside a kernel
-       call parks there instead of being released back into its loop to run more
-       application code while the report is being printed. */
+    /* Shutdown stops handing out the token, so tasks park inside their kernel calls. */
     if (frozen) {
         if (current != NULL && current->state == TS_RUNNING) {
             current->state = TS_READY;
@@ -147,12 +128,7 @@ static void dispatch_locked(void)
         return;
     }
 
-    /* The token is never taken from a task that is running application code,
-       only from one that is inside a kernel call and about to wait for it back.
-       A dispatch from anywhere else, the capture producer above all, leaves the
-       holder alone and the newly ready task is picked up at the holder's next
-       kernel call. That is the board's deferred dispatch out of an interrupt,
-       and without it two task bodies would execute at once. */
+    /* Never take the token from a task running application code, only from one inside a kernel call. */
     if (current != NULL && current->state == TS_RUNNING && current != self_task) {
         return;
     }
@@ -168,8 +144,7 @@ static void dispatch_locked(void)
     }
 }
 
-/* Called after every kernel call made from task context. A task that lost the
-   token here blocks until it is scheduled again. */
+/* After every kernel call from task context, a task that lost the token waits here. */
 static void resume_self_locked(task_t *self)
 {
     if (self == NULL) {
@@ -232,8 +207,7 @@ static void queue_remove(task_t **head, task_t **tail, task_t *t)
     }
 }
 
-/* A released waiter goes to READY, unless it was suspended while waiting, in
-   which case the event still fires but the task stays stopped. */
+/* A released waiter goes READY unless it was suspended while waiting. */
 static void release_waiter_locked(task_t *t, ER result)
 {
     t->wait_result = result;
@@ -292,10 +266,7 @@ void ukernel_shutdown(void)
     current = NULL;
     umutex_unlock(&kmutex);
 
-    /* A task running application code stops at its next kernel call, which is
-       never far away in this pipeline. Waking tasks instead would let them run
-       another loop iteration and move the counters the caller is about to
-       report. */
+    /* Running tasks stop at their next kernel call. */
     usleep_us(60000);
     kernel_up = 0;
 }
@@ -351,10 +322,7 @@ ER tk_set_flg(ID flgid, UINT setptn)
     }
     f->flgptn |= setptn;
 
-    /* The waiter walk, in queue order, releasing every task whose condition now
-       holds. A TWF_BITCLR waiter consumes its bits as it goes and the walk
-       stops as soon as the pattern is empty, which is what stops a second
-       waiter seeing a bit the first one has already taken. */
+    /* Release waiters in queue order, a TWF_BITCLR waiter consumes its bits and ends the walk. */
     task_t *t = f->whead;
     while (t != NULL) {
         task_t *next = t->qnext;
@@ -396,8 +364,7 @@ ER tk_clr_flg(ID flgid, UINT clrptn)
         umutex_unlock(&kmutex);
         return E_NOEXS;
     }
-    /* The argument is the pattern to KEEP, not the pattern to clear. Inverting
-       this latches the feature gate shut, so it is written to read that way. */
+    /* The argument is the pattern to keep, not the pattern to clear. */
     f->flgptn &= clrptn;
     umutex_unlock(&kmutex);
     return E_OK;
@@ -692,8 +659,7 @@ ER tk_get_mpl(ID mplid, SZ blksz, void **p_blk, TMO tmout)
         return E_OK;
     }
 
-    /* The caller polls and falls back to reading weights in place, so an
-       exhausted pool is a normal outcome here and never blocks the pipeline. */
+    /* Callers fall back to reading weights in place, so an exhausted pool never blocks. */
     umutex_unlock(&kmutex);
     (void)tmout;
     return E_TMOUT;
@@ -869,8 +835,7 @@ ER tk_slp_tsk(TMO tmout)
 {
     task_t *me = self_task;
     if (me == NULL) {
-        /* The startup thread parks here after creating the task set, which on
-           the board is where usermain stops. The CLI drives the run instead. */
+        /* The startup thread parks here, where usermain stops on the board. */
         if (tmout == TMO_FEVR) {
             while (!stop_requested) {
                 usleep_us(2000);
