@@ -22,8 +22,7 @@ Makefile
 # macOS
 .DS_Store
 
-# BSP zip download and extraction (content already copied into KWS_TRON/)
-mtk3bsp2_stm32h533.zip
+# Extraction of the original BSP download, the vendored copy is in KWS_TRON/
 mtk3bsp2_h533_extracted/
 
 # Training corpora, fetched by model/fetch_dataset.sh, never committed
