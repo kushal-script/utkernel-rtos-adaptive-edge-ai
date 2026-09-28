@@ -2,19 +2,13 @@
 
 ## Thesis
 
-Standard TinyML fixes every optimisation decision at compile time. The window is
-a constant, feature extraction always runs in full, and the model runs at one
-precision. The RTOS is a passive scheduler.
+Standard TinyML fixes every optimisation decision at compile time. The window is a constant, feature extraction always runs in full, and the model runs at one precision. The RTOS is a passive scheduler.
 
-This project inverts that. µT-Kernel 3.0 becomes an active co-optimiser. It
-reads hardware timing from the DWT cycle counter and signal statistics from the
-capture buffer, and uses them to reshape inference at runtime through native
-kernel primitives.
+This project inverts that. µT-Kernel 3.0 becomes an active co-optimiser. It reads hardware timing from the DWT cycle counter and signal statistics from the capture buffer, and uses them to reshape inference at runtime through native kernel primitives.
 
 ## Task pipeline
 
-Five tasks connected by µT-Kernel IPC. Data flows left to right, adaptation
-decisions flow from T5 back to the upstream tasks.
+Five tasks connected by µT-Kernel IPC. Data flows left to right, adaptation decisions flow from T5 back to the upstream tasks.
 
 | Task | Priority | Role | Owns |
 | :-- | :-- | :-- | :-- |
@@ -24,19 +18,13 @@ decisions flow from T5 back to the upstream tasks.
 | T3 | 5 | Feature extract | Frame scheduling, the quantised grid, the active frame count |
 | T4 | 8, or 6 when urgent | Inference engine | The model runner, per layer timing, weight streaming |
 
-Lower is more urgent. T5 leads because a control decision is worth little if it
-arrives after the work it was meant to shape.
+Lower is more urgent. T5 leads because a control decision is worth little if it arrives after the work it was meant to shape.
 
-T4 is last, and the urgent tier T5 promotes it to is still below the whole
-capture chain. That ordering is deliberate: letting a late inference outrank the
-task that drains the capture buffer would drop audio in order to save a
-deadline, which is a worse failure than the one being avoided.
+T4 is last, and the urgent tier T5 promotes it to is still below the whole capture chain. That ordering is deliberate: letting a late inference outrank the task that drains the capture buffer would drop audio in order to save a deadline, which is a worse failure than the one being avoided.
 
 ## Inter task communication
 
-Every signalling edge is a native kernel primitive, and adaptation values
-travel as single word shared state alongside the wakeups. Remove the kernel and
-the adaptive loop collapses, which is the point of the design.
+Every signalling edge is a native kernel primitive, and adaptation values travel as single word shared state alongside the wakeups. Remove the kernel and the adaptive loop collapses, which is the point of the design.
 
 | Primitive | Direction | Purpose |
 | :-- | :-- | :-- |
@@ -49,13 +37,9 @@ the adaptive loop collapses, which is the point of the design.
 | Memory pool `mplid_layer` | T4 internal | Per layer weight streaming with `tk_get_mpl` |
 | Priority change | T5 to T4 | Urgency driven scheduling with `tk_chg_pri` |
 
-One flag object per consumer edge, never shared. With `TA_WMUL` and a
-`TWF_BITCLR` wait, the kernel stops releasing waiters as soon as one of them
-clears the pattern, so two tasks waiting on the same object can lose a wakeup.
-Separate objects remove the hazard and cost nothing, the kernel allows sixteen.
+One flag object per consumer edge, never shared. With `TA_WMUL` and a `TWF_BITCLR` wait, the kernel stops releasing waiters as soon as one of them clears the pattern, so two tasks waiting on the same object can lose a wakeup. Separate objects remove the hazard and cost nothing, the kernel allows sixteen.
 
-All objects are created once in `usermain` before any task starts, from
-`app/ipc_objects.c`.
+All objects are created once in `usermain` before any task starts, from `app/ipc_objects.c`.
 
 ## Data path
 
@@ -66,15 +50,9 @@ All objects are created once in `usermain` before any task starts, from
                     interrupt sets an event flag
 ```
 
-The DMA writes one half of the capture buffer while the CPU reads the other, so
-that handoff costs no copy. The transfer complete interrupt sets an event flag
-and returns, which is the only work done at interrupt level. The ring between
-T2 and T3 exists because an analysis frame is longer than one capture block and
-must not be torn across a refill.
+The DMA writes one half of the capture buffer while the CPU reads the other, so that handoff costs no copy. The transfer complete interrupt sets an event flag and returns, which is the only work done at interrupt level. The ring between T2 and T3 exists because an analysis frame is longer than one capture block and must not be torn across a refill.
 
-The STM32H5 has no data cache, so DMA and CPU observe the same memory without
-flush or invalidate. Buffer sizing is in [hardware.md](hardware.md), the source
-itself in [signal_source.md](signal_source.md).
+The STM32H5 has no data cache, so DMA and CPU observe the same memory without flush or invalidate. Buffer sizing is in [hardware.md](hardware.md), the source itself in [signal_source.md](signal_source.md).
 
 ## File map
 
@@ -107,5 +85,4 @@ benchmark/
   bench_harness.*   the static against adaptive comparison
 ```
 
-Everything under `audio/` marked generated comes from `model/kws/export.py` and
-should never be edited by hand. See [../model/README.md](../model/README.md).
+Everything under `audio/` marked generated comes from `model/kws/export.py` and should never be edited by hand. See [../model/README.md](../model/README.md).

@@ -1,8 +1,6 @@
 # Model
 
-Training, quantisation, and export for the keyword spotting model. Everything
-the firmware compiles under `KWS_TRON/audio/` that is marked generated comes
-from here.
+Training, quantisation, and export for the keyword spotting model. Everything the firmware compiles under `KWS_TRON/audio/` that is marked generated comes from here.
 
 ## Flow
 
@@ -35,33 +33,19 @@ python ../tools/verify_device_core.py
 
 ## The golden reference
 
-`convert.py` contains a NumPy implementation of exactly the arithmetic the
-device performs, including the requantisation rounding. Export checks it against
-the trained float model before emitting anything, and refuses to be trusted if
-they disagree. `tools/verify_device_core.py` then checks the compiled C against
-the same reference.
+`convert.py` contains a NumPy implementation of exactly the arithmetic the device performs, including the requantisation rounding. Export checks it against the trained float model before emitting anything, and refuses to be trusted if they disagree. `tools/verify_device_core.py` then checks the compiled C against the same reference.
 
-This is what makes a device result diagnosable: the maths is settled on the host
-first, so a disagreement on hardware is a hardware or toolchain question rather
-than an open one.
+This is what makes a device result diagnosable: the maths is settled on the host first, so a disagreement on hardware is a hardware or toolchain question rather than an open one.
 
 ## Feature geometry
 
-A 30 ms frame with a 20 ms hop gives 49 frames over one second, and ten MFCC
-coefficients per frame, matching the input shape used by the published keyword
-spotting networks this project is compared against. `mfcc_config.h` mirrors
-`FeatureConfig` and the two must be changed together, followed by a regeneration
-and a retrain.
+A 30 ms frame with a 20 ms hop gives 49 frames over one second, and ten MFCC coefficients per frame, matching the input shape used by the published keyword spotting networks this project is compared against. `mfcc_config.h` mirrors `FeatureConfig` and the two must be changed together, followed by a regeneration and a retrain.
 
-The window, mel filterbank, and DCT matrix are generated here and emitted as C
-tables rather than recomputed on device, which guarantees the two agree and
-saves the device the work.
+The window, mel filterbank, and DCT matrix are generated here and emitted as C tables rather than recomputed on device, which guarantees the two agree and saves the device the work.
 
 ## Artifacts
 
-Promoted models live here with a version tag and a note stating accuracy, size,
-input shape, and the experiment folder that produced them. The raw training run
-stays under `experiments/`, only the artifact the firmware uses is promoted.
+Promoted models live here with a version tag and a note stating accuracy, size, input shape, and the experiment folder that produced them. The raw training run stays under `experiments/`, only the artifact the firmware uses is promoted.
 
 ```
 model/

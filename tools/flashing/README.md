@@ -6,11 +6,7 @@ Use the normal route first:
 STM32_Programmer_CLI -c port=SWD -w build/Release/KWS_TRON.hex -v -rst
 ```
 
-These scripts exist for a host whose ST-LINK USB link cannot sustain the bulk
-transfers SWD flashing needs, which was the case on one development machine
-here. SWD is used only for a few seconds to jump the core into the on chip ROM
-bootloader, then the image is written and verified over the virtual COM port
-with the standard UART bootloader protocol.
+These scripts exist for a host whose ST-LINK USB link cannot sustain the bulk transfers SWD flashing needs, which was the case on one development machine here. SWD is used only for a few seconds to jump the core into the on chip ROM bootloader, then the image is written and verified over the virtual COM port with the standard UART bootloader protocol.
 
 ```bash
 openocd -f interface/stlink.cfg -c "transport select swd" \
@@ -19,15 +15,10 @@ KWS_PORT=/dev/tty.usbmodemXXXX python tools/flashing/uart_flash.py \
         build/Release/KWS_TRON.bin --erase
 ```
 
-If `jump_bootloader.tcl` fails with `Fail reading CTRL/STAT register`, the
-probe's debug window has degraded, which happens after a handful of OpenOCD
-sessions on some hosts. Reset the probe and try again; the port name may
-change:
+If `jump_bootloader.tcl` fails with `Fail reading CTRL/STAT register`, the probe's debug window has degraded, which happens after a handful of OpenOCD sessions on some hosts. Reset the probe and try again; the port name may change:
 
 ```bash
 python tools/flashing/stlink_reset.py
 ```
 
-`uart_flash.py` contains no mass erase and no option byte command of any kind,
-so it can only write and verify user flash. Every byte is read back and compared
-before the firmware is started.
+`uart_flash.py` contains no mass erase and no option byte command of any kind, so it can only write and verify user flash. Every byte is read back and compared before the firmware is started.

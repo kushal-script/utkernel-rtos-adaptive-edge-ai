@@ -37,3 +37,11 @@ __pycache__/
 
 # Upstream kernel clones kept for reference, never referenced by the build (kernel is vendored in KWS_TRON/mtk3/)
 mtk3_repos/
+
+# Local generators for the slide deck, its figures and the demo video, kept out of the repository
+tools/build_slides.js
+tools/make_slide_figures.py
+tools/capture_demo_run.py
+tools/make_demo_video.py
+docs/demo_capture.json
+docs/demo_converge.mp4
